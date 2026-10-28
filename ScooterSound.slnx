@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ScooterSound.Core/ScooterSound.Core.csproj" />
+  <Project Path="ScooterSound/ScooterSound.csproj" />
+  <Project Path="ScooterSound.Core.Checks/ScooterSound.Core.Checks.csproj" />
+</Solution>
