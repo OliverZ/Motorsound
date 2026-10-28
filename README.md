@@ -1,5 +1,7 @@
 # Scooter Sound
 
+Aktuelle Version: **2.0**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
+
 Android-App in .NET MAUI mit fünf synthetischen Motorprofilen: 50-ccm-Roller,
 Motorrad, V8, Flugzeugturbine und Diesel. GPS-Geschwindigkeit steuert virtuelle
 Drehzahl, Last, Schaltverhalten und Klang. Kein Backend, keine Standortübertragung.
@@ -23,11 +25,29 @@ zeigt die aktive Fahrt und bietet eine Stopp-Aktion. Der Testmodus funktioniert 
 Standortberechtigung: vor dem Start aktivieren und die Geschwindigkeit am Regler ändern.
 Motorwechsel und Lautstärke sind während der Fahrt möglich. Motor und Lautstärke werden gespeichert.
 
+Beim Start ertönt für etwa 1,65 Sekunden ein synthetischer Anlasser mit Zündmoment,
+kurzem Hochlaufen und Übergang in den Leerlauf. Bei bereits rollendem Fahrzeug geht
+die Startsequenz anschließend weich in den GPS-gesteuerten Fahrklang über.
+Der V8 ist auf einen tiefen Crossplane-Klang abgestimmt: unregelmäßige Impulse zweier
+Zylinderbänke, tiefe Kurbelwellenanteile, ein gefilterter Auspuffklang und mehr Druck
+unter Last. Sein Leerlauf liegt bei 620 U/min, die Obergrenze bei 4400 U/min;
+gleichmäßige Fahrt nutzt niedrigere Drehzahlen als Beschleunigen.
+
+Eine reproduzierbare, 22 Sekunden lange V8-Hörprobe lässt sich ohne Android erzeugen:
+
+```sh
+dotnet run --project ScooterSound.Core.Checks -- --preview artifacts/v8-start-fahrt.wav
+```
+
+Die Hörprobe enthält Start/Leerlauf (0–3 s), Beschleunigen (3–11 s), konstante Fahrt
+(11–14 s), Verzögern (14–19 s) und Rückkehr zum Leerlauf (19–22 s). Für die Beurteilung
+des Bassanteils Kopfhörer oder einen bassfähigen Lautsprecher verwenden.
+
 ## Aufbau
 
 - `ScooterSound.Core`: plattformfreie Filterung, Zustandsschätzung, Motorprofile und PCM-Synthese.
 - `ScooterSound`: MAUI-Oberfläche und atomar ausgetauschte Zustandsabbilder.
-- `Platforms/Android/RideService.cs`: GPS, Foreground-Service, Wake-Lock, Audiofokus und AudioTrack.
+- `Platforms/Android/RideService.cs`: GPS auf eigenem Thread, Foreground-Service, Wake-Lock, Audiofokus und AudioTrack.
 - `ScooterSound.Core.Checks`: ausführbare Kernprüfungen ohne zusätzliche Testpakete.
 
 ```powershell
@@ -46,15 +66,34 @@ angefordert. Audiofokusverlust (z. B. Anruf) oder getrennte Kopfhörer/Bluetooth
 stoppen die Fahrt; zum Fortsetzen erneut starten. Nach Prozessbeendigung startet der
 Dienst nicht automatisch neu. Gerätespezifische Energiesparmechanismen können den Dienst beeinflussen.
 
+Für GPS bei gesperrtem Bildschirm in der App **GPS bei ausgeschaltetem Display**
+öffnen. Dort kann Scooter Sound ausdrücklich von der Akkuoptimierung ausgenommen
+werden. Je nach Hersteller außerdem unter Apps → Scooter Sound → Akku
+**Uneingeschränkt** bzw. Hintergrundaktivität erlauben. Der systemweite Energiesparmodus
+kann GPS bei Display-Aus trotz laufendem Dienst abschalten oder drosseln; diesen für
+die Fahrt ausschalten. Die App zeigt die Systemeinstellungen nur auf Tastendruck an.
+Die Ausnahme erhöht während einer Fahrt gegebenenfalls den Akkuverbrauch.
+
+Der Dienst hält die CPU bereits vor der GPS-Anmeldung wach. Standortcallbacks laufen
+auf einem eigenen Thread, unabhängig vom UI-Timer; Android 12+ erhält eine explizite
+High-Accuracy-Anforderung ohne Batching. Ein echter Empfangsausfall führt weiterhin
+zum Leerlauf; frische Messungen setzen die GPS-Steuerung automatisch fort.
+Der bisherige Aufbau enthielt bereits einen Foreground-Service und Wake-Lock;
+die konkrete Ursache des gemeldeten Display-Aus-Problems ist ohne Gerätetest nicht
+bestätigt. Ein zusätzlicher Hintergrundstandortzugriff wird dafür nicht angefordert.
+
 ## Umfang und Prüfung
 
 Die Sounds werden mathematisch erzeugt, es sind keine echten Motoraufnahmen enthalten.
 Die fünf Profile unterscheiden sich in Klang, Drehzahlverlauf und Gangsimulation.
-Sample-Layer, Aufnahmen und besondere Start-/Schalt-/Abstellgeräusche sind mögliche Erweiterungen.
+Sample-Layer, Aufnahmen und besondere Schalt-/Abstellgeräusche sind mögliche Erweiterungen.
 GPS reagiert verzögert; insbesondere bei schlechter Sicht zum Himmel und niedriger Geschwindigkeit
 bleibt die Zustandsschätzung begrenzt. Positionsdifferenzen dienen nur als eingeschränkter Rückfall.
 
 Die Kernprüfungen wurden mit dem lokal eingerichteten .NET-10-SDK erfolgreich ausgeführt.
+Sie prüfen zusätzlich die Startsequenzen aller Profile bei 44,1/48 kHz, blockunabhängige
+PCM-Kontinuität, Stummstellung, V8-Lastdynamik, Bass/Höhen-Verhältnis, Aussteuerungsreserve,
+Gleichspannungsanteil, niedrige Reisedrehzahl sowie GPS-Ausfall und Wiederaufnahme.
 Eine signierte, eigenständig installierbare Debug-APK lässt sich mit `./build-apk.ps1` erzeugen;
 sie landet unter `artifacts/` und richtet sich standardmäßig an ARM64-Geräte.
 Der ARM64-Debug-Build wurde erfolgreich erstellt und die APK-Signatur mit `apksigner`
@@ -70,3 +109,4 @@ Vor Verwendung folgende Geräteprüfungen durchführen:
 - Wiederholtes Starten/Stoppen und mindestens 20 Minuten Betrieb ohne Audioaussetzer.
 
 Android-Diensttypen: https://developer.android.com/develop/background-work/services/fgs/service-types
+Standort bei ausgeschaltetem Bildschirm: https://developer.android.com/develop/sensors-and-location/location/permissions

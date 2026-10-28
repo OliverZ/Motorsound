@@ -1,4 +1,5 @@
 using ScooterSound.Core;
+using System.Numerics;
 
 static void Check(bool condition, string message)
 {
@@ -51,3 +52,134 @@ for (int i = 100; i <= 120; i++)
 }
 Check(result.State == DrivingState.Decelerating, "Braking must be detected.");
 Console.WriteLine("PASS braking detection");
+
+static double Rms(IEnumerable<short> samples) => Math.Sqrt(samples.Average(x => (double)x * x));
+
+static short[] RenderSteady(double rpm, double load, int rate = 44100)
+{
+    var synth = new Synthesizer();
+    var snapshot = new EngineSnapshot(10, 0, rpm, load, 2, DrivingState.Cruising, false);
+    var samples = new short[rate];
+    synth.Render(samples, snapshot, Motor.V8, 1, rate); // warm up smoothing/filters
+    synth.Render(samples, snapshot, Motor.V8, 1, rate);
+    return samples;
+}
+
+foreach (int rate in new[] { 44100, 48000 })
+{
+    foreach (var profile in EngineProfile.All)
+    {
+        var idle = new EngineSnapshot(0, 0, profile.IdleRpm, .08, 1, DrivingState.Idle, false);
+        var whole = new Synthesizer();
+        var blocks = new Synthesizer();
+        whole.Start(); blocks.Start();
+        short[] continuous = new short[rate * 3], chunked = new short[continuous.Length];
+        whole.Render(continuous, idle, profile.Motor, .8, rate);
+        for (int offset = 0; offset < chunked.Length; offset += 317)
+            blocks.Render(chunked.AsSpan(offset, Math.Min(317, chunked.Length - offset)), idle, profile.Motor, .8, rate);
+        Check(continuous.SequenceEqual(chunked), "Startup/phase must not depend on PCM block size.");
+        Check(!whole.IsStarting && !blocks.IsStarting, "Starter must finish and hand over to idle.");
+        Check(Rms(continuous.Skip(rate / 10).Take(rate / 4)) > 80, "Cranking must be audible before ignition.");
+        Check(Rms(continuous.Skip(rate * 2)) > 300, "Ignition must settle into audible idle.");
+        Check(continuous.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "Startup must retain headroom.");
+        int largestStep = continuous.Zip(continuous.Skip(1), (a, b) => Math.Abs(a - b)).Max();
+        Check(largestStep < 12000, "Startup must not click at ignition or idle handover.");
+        whole.Render(continuous, idle, profile.Motor, 0, rate);
+        Check(continuous.TakeLast(rate).All(x => x == 0), "Muted starter/idle must settle to silence.");
+    }
+    var quiet = RenderSteady(1600, .08, rate);
+    var throttle = RenderSteady(1600, .85, rate);
+    Check(Rms(throttle) > Rms(quiet) * 1.4, "Throttle must add body at the same RPM.");
+    Console.WriteLine($"PASS {rate} Hz: all motor starts, PCM block continuity, mute and V8 throttle dynamics");
+}
+
+// Hann-windowed FFT measures actual audible bass (20–220 Hz) versus
+// upper harmonics above 900 Hz, without leakage from a shallow test filter.
+static double BassTrebleRatio(short[] samples, int rate)
+{
+    const int n = 32768;
+    var bins = new Complex[n];
+    for (int i = 0; i < n; i++)
+        bins[i] = samples[i] * (.5 - .5 * Math.Cos(Math.Tau * i / (n - 1)));
+    for (int i = 1, j = 0; i < n; i++)
+    {
+        int bit = n >> 1;
+        for (; (j & bit) != 0; bit >>= 1) j ^= bit;
+        j ^= bit;
+        if (i < j) (bins[i], bins[j]) = (bins[j], bins[i]);
+    }
+    for (int length = 2; length <= n; length <<= 1)
+    {
+        Complex step = Complex.FromPolarCoordinates(1, -Math.Tau / length);
+        for (int offset = 0; offset < n; offset += length)
+        {
+            Complex w = Complex.One;
+            for (int k = 0; k < length / 2; k++, w *= step)
+            {
+                Complex even = bins[offset + k], odd = w * bins[offset + k + length / 2];
+                bins[offset + k] = even + odd;
+                bins[offset + k + length / 2] = even - odd;
+            }
+        }
+    }
+    double bass = 0, treble = 0;
+    for (int i = 1; i < n / 2; i++)
+    {
+        double hz = (double)i * rate / n;
+        double energy = bins[i].Magnitude * bins[i].Magnitude;
+        if (hz is >= 20 and <= 220) bass += energy;
+        if (hz >= 900) treble += energy;
+    }
+    return Math.Sqrt(bass / treble);
+}
+
+foreach (double revs in new[] { 620d, 1600, 2800, 4400 })
+{
+    var samples = RenderSteady(revs, .7);
+    double ratio = BassTrebleRatio(samples, 44100);
+    Check(ratio > 4, $"V8 must stay bass-dominant, including at high RPM ({revs}: {ratio:F1}).");
+    Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "V8 must retain headroom at full volume.");
+    Check(Math.Abs(samples.Average(x => (double)x)) < 150, "Exhaust must not contain a DC offset.");
+    Console.WriteLine($"PASS V8 {revs} rpm: bass/treble RMS {ratio:F1}, peak {samples.Max(x => Math.Abs((int)x)) / (double)short.MaxValue:P0}");
+}
+
+var cruise = new EngineSimulator();
+EngineSnapshot cruiseSnapshot = cruise.Tick(0, motor);
+for (int i = 1; i <= 400; i++)
+{
+    double t = i * .1;
+    cruise.PushSpeed(Math.Min(25 / 3.6, t * .4), 5, t, t);
+    cruiseSnapshot = cruise.Tick(t, motor);
+}
+Check(cruiseSnapshot.Gear == 5 && cruiseSnapshot.Rpm < 2800, "V8 steady cruising must use low revs in top gear.");
+// A long gap represents missing fixes with the screen locked, followed by recovery.
+for (int i = 401; i <= 500; i++) cruiseSnapshot = cruise.Tick(i * .1, motor);
+Check(cruiseSnapshot.SignalLost, "GPS outage must be reported.");
+Check(cruise.PushSpeed(4, 5, 50.1, 50.1), "A fresh GPS fix must recover after a long outage.");
+Check(!cruise.Tick(50.1, motor).SignalLost, "GPS recovery must resume the engine without a UI tick.");
+Console.WriteLine("PASS low-rev V8 cruise and GPS outage/recovery");
+
+if (args.Length == 2 && args[0] == "--preview")
+{
+    string path = Path.GetFullPath(args[1]);
+    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+    using var writer = new BinaryWriter(File.Create(path));
+    const int rate = 44100, seconds = 22;
+    writer.Write("RIFF"u8); writer.Write(36 + rate * seconds * 2); writer.Write("WAVEfmt "u8);
+    writer.Write(16); writer.Write((short)1); writer.Write((short)1);
+    writer.Write(rate); writer.Write(rate * 2); writer.Write((short)2); writer.Write((short)16);
+    writer.Write("data"u8); writer.Write(rate * seconds * 2);
+    var engine = new EngineSimulator();
+    var synth = new Synthesizer();
+    synth.Start();
+    short[] block = new short[882];
+    for (int i = 0; i < seconds * 50; i++)
+    {
+        double t = i / 50d;
+        double kmh = t < 3 ? 0 : t < 11 ? (t - 3) / 8 * 25 : t < 14 ? 25 : Math.Max(0, 25 - (t - 14) * 5);
+        if (i % 5 == 0) engine.PushSpeed(kmh / 3.6, 5, t, t);
+        synth.Render(block, engine.Tick(t, motor), Motor.V8, .8);
+        foreach (short value in block) writer.Write(value);
+    }
+    Console.WriteLine($"V8 preview: {path}");
+}

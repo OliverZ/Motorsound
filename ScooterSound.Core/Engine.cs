@@ -8,7 +8,7 @@ public sealed record EngineProfile(Motor Motor, string Name, string Description,
     {
         new EngineProfile(Motor.Scooter, "50-ccm-Roller", "Zweitakt · Variomatik", 1600, 8500),
         new EngineProfile(Motor.Motorcycle, "Motorrad", "Vierzylinder · 6 Gänge", 1200, 12000),
-        new EngineProfile(Motor.V8, "V8-Auto", "Acht Zylinder · 5 Gänge", 750, 6500),
+        new EngineProfile(Motor.V8, "V8-Auto", "Tiefer Crossplane-V8 · 5 Gänge", 620, 4400),
         new EngineProfile(Motor.Turbine, "Flugzeugturbine", "Strahltriebwerk · sanftes Hochlaufen", 2500, 18000),
         new EngineProfile(Motor.Diesel, "Diesel", "Selbstzünder · 5 Gänge", 800, 4200)
     };
@@ -82,6 +82,10 @@ public sealed class EngineSimulator
             while (gear < gears && normalized > gear / (double)gears + .035) gear++;
             while (gear > 1 && normalized < (gear - 1) / (double)gears - .045) gear--;
             rev = speed < .3 ? 0 : Math.Clamp(.16 + normalized * gears / gear * .66 + load * .1, 0, 1);
+            // A large-displacement V8 pulls from low revs; load opens the exhaust
+            // and raises revs without turning a steady scooter ride into a race engine.
+            if (profile.Motor == Motor.V8 && speed >= .3)
+                rev = Math.Clamp(.06 + normalized * gears / gear * (.30 + .16 * load) + .16 * load, 0, 1);
         }
         if (state == DrivingState.Idle) rev = 0;
         double target = profile.IdleRpm + rev * (profile.MaxRpm - profile.IdleRpm);

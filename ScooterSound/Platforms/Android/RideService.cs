@@ -21,11 +21,13 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
     AudioManager? audioManager;
     AudioFocusRequestClass? focus;
     PowerManager.WakeLock? wakeLock;
+    HandlerThread? locationThread;
+    HandlerExecutor? locationExecutor;
     NoisyReceiver? noisy;
     bool receiverRegistered;
     ALocation? previousLocation;
     bool testMode;
-    bool destroyed;
+    volatile bool destroyed;
     string? endMessage;
     static double Now => SystemClock.ElapsedRealtime() / 1000d;
 
@@ -54,14 +56,28 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
             else
                 RegisterReceiver(noisy, new IntentFilter(AudioManager.ActionAudioBecomingNoisy));
             receiverRegistered = true;
-            if (!testMode)
-            {
-                locations = (LocationManager)GetSystemService(LocationService)!;
-                locations.RequestLocationUpdates(LocationManager.GpsProvider, 500, 0, this, Looper.MainLooper);
-            }
+            // Hold the CPU before registering GPS; neither depends on the Activity
+            // or its refresh timer, and the display is free to switch off.
             var power = (PowerManager)GetSystemService(PowerService)!;
             wakeLock = power.NewWakeLock(WakeLockFlags.Partial, "ScooterSound:Ride");
             wakeLock!.Acquire();
+            if (!testMode)
+            {
+                locations = (LocationManager)GetSystemService(LocationService)!;
+                locationThread = new HandlerThread("ScooterSound:GPS");
+                locationThread.Start();
+                if (OperatingSystem.IsAndroidVersionAtLeast(31))
+                {
+                    locationExecutor = new HandlerExecutor(new Handler(locationThread.Looper!));
+                    using var request = new LocationRequest.Builder(500)
+                        .SetMinUpdateIntervalMillis(250)!
+                        .SetMaxUpdateDelayMillis(0)!
+                        .SetMinUpdateDistanceMeters(0)!
+                        .SetQuality((int)LocationRequestQuality.HighAccuracy)!.Build()!;
+                    locations.RequestLocationUpdates(LocationManager.GpsProvider, request, locationExecutor, this);
+                }
+                else locations.RequestLocationUpdates(LocationManager.GpsProvider, 500, 0, this, locationThread.Looper);
+            }
             RideSession.Running = true;
             RideSession.Status = testMode ? "Testmodus · Geschwindigkeit über den Regler" : "Warte auf GPS …";
             cancellation = new CancellationTokenSource();
@@ -101,6 +117,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
             using var track = new AudioTrack(global::Android.Media.Stream.Music, rate, ChannelOut.Mono, Encoding.Pcm16bit, bufferBytes, AudioTrackMode.Stream);
             if (track.State != AudioTrackState.Initialized) throw new InvalidOperationException("AudioTrack konnte nicht initialisiert werden.");
             var synth = new Synthesizer();
+            synth.Start();
             var buffer = new short[882]; // 20 ms blocks, distinct from the device's output buffer.
             double lastTest = double.NegativeInfinity;
             double testMetresPerSecond = 0;
@@ -147,6 +164,17 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
 
     public void OnLocationChanged(ALocation location)
     {
+        // Callbacks now run on the GPS thread. Serialize teardown and simulator
+        // input so a final queued fix cannot access a disposed location.
+        lock (gate)
+        {
+            if (destroyed) return;
+            AcceptLocation(location);
+        }
+    }
+
+    void AcceptLocation(ALocation location)
+    {
         double time = location.ElapsedRealtimeNanos / 1_000_000_000d;
         double now = Now;
         if (!location.HasAccuracy || location.Accuracy > 40 || now - time > 3 || time > now + .5) return;
@@ -165,7 +193,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
         }
         previousLocation?.Dispose();
         previousLocation = new ALocation(location);
-        lock (gate) simulator.PushSpeed(metresPerSecond, location.Accuracy, time, now);
+        simulator.PushSpeed(metresPerSecond, location.Accuracy, time, now);
     }
 
     public void OnProviderDisabled(string provider) { RideSession.Status = "GPS deaktiviert · Übergang zum Leerlauf"; }
@@ -184,7 +212,12 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
         cancellation?.Cancel();
         try { locations?.RemoveUpdates(this); }
         catch (Java.Lang.SecurityException) { /* Location permission may have been revoked mid-ride. */ }
-        previousLocation?.Dispose();
+        locationThread?.QuitSafely();
+        lock (gate)
+        {
+            previousLocation?.Dispose();
+            previousLocation = null;
+        }
         if (noisy is not null)
         {
             if (receiverRegistered) UnregisterReceiver(noisy);
@@ -205,6 +238,14 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
         public override void OnReceive(Context? context, Intent? intent)
         {
             if (intent?.Action == AudioManager.ActionAudioBecomingNoisy) disconnected();
+        }
+    }
+
+    sealed class HandlerExecutor(Handler handler) : Java.Lang.Object, Java.Util.Concurrent.IExecutor
+    {
+        public void Execute(Java.Lang.IRunnable? command)
+        {
+            if (command is not null) handler.Post(command);
         }
     }
 }

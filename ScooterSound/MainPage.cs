@@ -33,6 +33,9 @@ public sealed class MainPage : ContentPage
         volume.ValueChanged += (_, e) => RideSession.Volume = e.NewValue;
         volume.DragCompleted += (_, _) => Preferences.Default.Set("volume", RideSession.Volume);
         start.Clicked += async (_, _) => await ToggleRide();
+        var background = new Button { Text = "GPS bei ausgeschaltetem Display", TextColor = Colors.White,
+            BackgroundColor = Color.FromArgb("#192539"), CornerRadius = 12 };
+        background.Clicked += async (_, _) => await ConfigureBackground();
         var content = new VerticalStackLayout
         {
             Padding = new Thickness(24, 32, 24, 24), Spacing = 18,
@@ -48,6 +51,7 @@ public sealed class MainPage : ContentPage
                     Content = new VerticalStackLayout { Spacing = 6, Children = { speed, Text("km/h", 16, "#B5C3D7"), rpm, state } }
                 },
                 signal, start,
+                background,
                 Text("LAUTSTÄRKE", 12, "#B5C3D7"), volume,
                 new HorizontalStackLayout { Spacing = 16, Children = { Text("Testmodus", 18, "#F4F8FC"), test } },
                 testValue, testSlider,
@@ -108,6 +112,37 @@ public sealed class MainPage : ContentPage
             await DisplayAlertAsync("Fahrt konnte nicht gestartet werden", ex.Message, "OK");
         }
         finally { busy = false; start.IsEnabled = true; Refresh(); }
+    }
+
+    async Task ConfigureBackground()
+    {
+        var choice = await DisplayActionSheetAsync(
+            "Für GPS bei gesperrtem Bildschirm: Scooter Sound von der Akkuoptimierung ausnehmen und den systemweiten Energiesparmodus ausschalten. Manche Hersteller verlangen zusätzlich Akku → Uneingeschränkt in den App-Einstellungen.",
+            "Abbrechen", null, "Akkuoptimierung aufheben", "Energiesparmodus einstellen", "App-Einstellungen öffnen");
+        var context = global::Android.App.Application.Context;
+        Intent? intent = null;
+        if (choice == "Akkuoptimierung aufheben")
+        {
+            var power = (global::Android.OS.PowerManager)context.GetSystemService(Context.PowerService)!;
+            if (power.IsIgnoringBatteryOptimizations(context.PackageName!))
+            {
+                await DisplayAlertAsync("Bereits eingerichtet", "Scooter Sound ist von der Android-Akkuoptimierung ausgenommen. Bei GPS-Aussetzern zusätzlich den Energiesparmodus und die Akku-Einstellungen des Herstellers prüfen.", "OK");
+                return;
+            }
+            intent = new Intent(global::Android.Provider.Settings.ActionRequestIgnoreBatteryOptimizations,
+                global::Android.Net.Uri.Parse($"package:{context.PackageName}"));
+        }
+        else if (choice == "Energiesparmodus einstellen")
+            intent = new Intent(global::Android.Provider.Settings.ActionBatterySaverSettings);
+        else if (choice == "App-Einstellungen öffnen")
+            intent = new Intent(global::Android.Provider.Settings.ActionApplicationDetailsSettings,
+                global::Android.Net.Uri.Parse($"package:{context.PackageName}"));
+        if (intent is null) return;
+        try { context.StartActivity(intent.AddFlags(ActivityFlags.NewTask)); }
+        catch (ActivityNotFoundException)
+        {
+            await DisplayAlertAsync("Akku-Einstellungen", "Bitte in den Android-Einstellungen unter Apps → Scooter Sound → Akku den Hintergrundbetrieb erlauben und den Energiesparmodus ausschalten.", "OK");
+        }
     }
 
     void Refresh()
