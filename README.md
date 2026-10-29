@@ -1,6 +1,6 @@
 # Scooter Sound
 
-Aktuelle Version: **2.0**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
+Aktuelle Version: **3.0**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
 
 Android-App in .NET MAUI mit sechs Motorprofilen: 50-ccm-Roller,
 Motorrad, V8, Flugzeugturbine, Diesel und Plymouth V8. GPS-Geschwindigkeit steuert virtuelle
@@ -24,6 +24,33 @@ Für reale Fahrten präzisen Standort erlauben und GPS einschalten. Die Benachri
 zeigt die aktive Fahrt und bietet eine Stopp-Aktion. Der Testmodus funktioniert ohne
 Standortberechtigung: vor dem Start aktivieren und die Geschwindigkeit am Regler ändern.
 Motorwechsel und Lautstärke sind während der Fahrt möglich. Motor und Lautstärke werden gespeichert.
+
+## Lautstärke und Gaspedal
+
+Alle sechs Motorprofile nutzen eine gemeinsame Pegelanhebung mit schneller
+Spitzenbegrenzung und sanfter Freigabe. Bei Vollgas wird der digitale Bereich
+bis etwa 95 % genutzt; Lastunterschiede und die individuelle Klangfarbe bleiben
+erhalten. Der Vergleich bei gleicher Lautstärkereglerstellung ergab je nach
+Profil und Betriebszustand etwa 4,5–15,5 dB mehr RMS-Pegel als zuvor.
+Die neue Voreinstellung ist 100 %. Gespeicherte Werte bleiben erhalten; **MAX**
+setzt den App-Regler auf 100 %. Die Android-Medienlautstärke wird weiterhin über
+die Lautstärketasten des Geräts eingestellt.
+
+Nach dem Start **GAS · GEDRÜCKT HALTEN** betätigen oder den Gaspedal-Regler
+dosieren. Beim Loslassen geht das Pedal auf null und die Drehzahl fällt weich
+zurück. Das funktioniert auch im Stand. Ohne GPS den Testmodus aktivieren und
+mit unverändertem Geschwindigkeitsregler bei 0 km/h starten. Das Pedal verändert
+nur Drehzahl und Last, niemals die GPS-Geschwindigkeit. Beim Stoppen, Motorwechsel,
+Seitenwechsel oder Wechsel in eine andere App wird das Pedal zurückgesetzt.
+Die Bedienung auf einem echten Android-Gerät steht noch zur Prüfung aus.
+
+```sh
+dotnet run --project ScooterSound.Core.Checks -- --preview-pedal artifacts/v8-gaspedal-laut.wav
+```
+
+Diese Hörprobe zeigt Start, Leerlauf und drei Gasstöße bei weiterhin 0 km/h.
+
+## Klang
 
 Beim Start ertönt für etwa 1,65 Sekunden ein synthetischer Anlasser mit Zündmoment,
 kurzem Hochlaufen und Übergang in den Leerlauf. Bei bereits rollendem Fahrzeug geht
@@ -106,6 +133,15 @@ Eine signierte, eigenständig installierbare Debug-APK lässt sich mit `./build-
 sie landet unter `artifacts/` und richtet sich standardmäßig an ARM64-Geräte.
 Der ARM64-Debug-Build wurde erfolgreich erstellt und die APK-Signatur mit `apksigner`
 geprüft (v2 und v3). Mindestversion Android 8, Zielversion Android 16 / API 36.
+Das GitHub-Release 3.0 enthält eine größenoptimierte ARM64-Release-APK ohne
+Debugsymbole und AOT-Vorkompilierung. Die Buildoptionen dafür sind:
+
+```sh
+dotnet build ScooterSound/ScooterSound.csproj -t:SignAndroidPackage -c Release -f net10.0-android -p:RuntimeIdentifier=android-arm64 -p:AndroidPackageFormats=apk -p:EmbedAssembliesIntoApk=true -p:RunAOTCompilation=false -p:DebugSymbols=false -p:DebugType=None
+```
+
+Für wiederholte Updates denselben Signaturschlüssel verwenden. Die bereitgestellte
+3.0-APK verwendet den Schlüssel aus Release 2.0.
 Ein Laufzeittest auf einem Android-Gerät steht noch aus.
 Vor Verwendung folgende Geräteprüfungen durchführen:
 

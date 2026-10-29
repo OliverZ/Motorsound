@@ -1,6 +1,17 @@
 # Änderungen
 
-## Unveröffentlicht
+## 3.0
+
+- Höherer Ausgangspegel aller sechs Profile durch gemeinsame Pegelanhebung,
+  DC-Filterung und schnelle Spitzenbegrenzung; maximal etwa 95 % bei Vollgas.
+- App-Lautstärke bei neuen Installationen standardmäßig 100 %, zusätzlicher
+  MAX-Knopf; gespeicherte Benutzerwerte werden weiterhin berücksichtigt.
+- Gaspedal als Haltetaste und dosierbarer Regler, auch im Stand und ohne GPS
+  im Testmodus. Loslassen, App-Wechsel und Stoppen setzen das Pedal zurück.
+- Drehzahl fällt nach dem Gaswegnehmen weicher ab. Das Pedal verändert keine
+  GPS-Messwerte und wird getrennt von der simulierten Geschwindigkeit ausgewertet.
+- Prüfungen für Standgasstöße, Rückkehr zum Leerlauf, GPS-Übernahme sowie
+  Pegel und Lautstärkeregler aller Profile bei 44,1 und 48 kHz.
 
 - Zusätzliches Plymouth-V8-Profil auf Basis der bereitgestellten MP3, mit tiefem
   Auspuff-Loop, lastabhängiger Sättigung, GPS-gesteuerter Tonhöhe und drei Gängen.
@@ -8,6 +19,16 @@
   überblendet, Gleichspannungsanteil und Höhen gefiltert.
 - Auswahl und gespeicherte Motorprofile unterstützen jetzt sechs Einträge.
 - Plymouth-Hörprobe sowie Prüfungen auf Schleifenknackser, Bassanteil und Übersteuerung.
+
+Optimierte ARM64-APK als Release-Build ohne Debugsymbole und ohne AOT-Vorkompilierung.
+Kernprüfungen bei 44,1/48 kHz, Android-Build und APK-Signatur geprüft.
+Bedienung des Gaspedals, App-Wechsel und GPS bei gesperrtem Bildschirm müssen
+zusätzlich auf einem echten Android-Gerät getestet werden.
+
+Die APK verwendet denselben Signaturschlüssel wie Release 2.0 und kann darüber
+installiert werden. Beim Wechsel direkt von 1.0 muss die alte App wegen des
+anderen Signaturschlüssels vorher deinstalliert werden; dabei gehen lokale
+App-Einstellungen verloren.
 
 ## 2.0
 

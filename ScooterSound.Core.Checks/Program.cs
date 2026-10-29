@@ -53,6 +53,34 @@ for (int i = 100; i <= 120; i++)
 Check(result.State == DrivingState.Decelerating, "Braking must be detected.");
 Console.WriteLine("PASS braking detection");
 
+foreach (var profile in EngineProfile.All)
+{
+    var engine = new EngineSimulator();
+    EngineSnapshot idle = engine.Tick(0, profile);
+    EngineSnapshot revved = idle;
+    // Pedal must work without any GPS fixes, while keeping the measured speed zero.
+    for (int i = 1; i <= 400; i++) revved = engine.Tick(i * .02, profile, 1);
+    Check(revved.Rpm > profile.MaxRpm * .97, "Full pedal must reach maximum RPM in standstill.");
+    Check(revved.SpeedKmh == 0 && revved.SignalLost && revved.Gear == 0,
+        "Pedal must not fabricate GPS speed, signal or a driving gear.");
+    Check(revved.State == DrivingState.Revving && revved.Load > .99, "Pedal must apply engine load.");
+    Check(engine.Tick(8.02, profile, 4).Rpm <= profile.MaxRpm, "Pedal must clamp excessive input.");
+    for (int i = 402; i <= 1000; i++) revved = engine.Tick(i * .02, profile, 0);
+    Check(revved.State == DrivingState.Idle && revved.Rpm < profile.IdleRpm * 1.02,
+        "Releasing the pedal must return to idle, including turbine spool-down.");
+    Check(engine.Tick(20.02, profile, double.NaN).State == DrivingState.Idle, "Invalid pedal input must be released.");
+    // Pedal release while moving must hand control back to real speed.
+    for (int i = 1002; i <= 1400; i++)
+    {
+        double t = i * .02;
+        if (i % 5 == 0) engine.PushSpeed(3, 5, t, t);
+        revved = engine.Tick(t, profile, i < 1200 ? 1 : 0);
+    }
+    Check(revved.SpeedKmh > 10 && !revved.SignalLost && revved.State != DrivingState.Revving,
+        "GPS control must resume after releasing the pedal while moving.");
+    Console.WriteLine($"PASS {profile.Name}: stationary pedal, release and GPS handover");
+}
+
 static double Rms(IEnumerable<short> samples) => Math.Sqrt(samples.Average(x => (double)x * x));
 
 static short[] RenderSteady(double rpm, double load, int rate = 44100, Motor motor = Motor.V8)
@@ -67,6 +95,25 @@ static short[] RenderSteady(double rpm, double load, int rate = 44100, Motor mot
 
 foreach (int rate in new[] { 44100, 48000 })
 {
+    foreach (var profile in EngineProfile.All)
+    {
+        foreach (double rev in new[] { profile.IdleRpm, (profile.IdleRpm + profile.MaxRpm) / 2, profile.MaxRpm })
+        {
+            var pcm = RenderSteady(rev, 1, rate, profile.Motor);
+            int peak = pcm.Max(x => Math.Abs((int)x));
+            Check(peak <= short.MaxValue * .951, "Full-load output must stay below the limiter ceiling.");
+            Check(peak > short.MaxValue * .75, $"{profile.Name}: full throttle must use the PCM range.");
+            Check(Rms(pcm) > short.MaxValue * .23, $"{profile.Name}: full throttle must produce a strong sustained level.");
+            // A quieter slider setting must stay quieter rather than being undone by automatic gain.
+            var synth = new Synthesizer();
+            var snapshot = new EngineSnapshot(0, 0, rev, 1, 0, DrivingState.Revving, false);
+            synth.Render(pcm, snapshot, profile.Motor, .25, rate);
+            synth.Render(pcm, snapshot, profile.Motor, .25, rate);
+            Check(pcm.Max(x => Math.Abs((int)x)) < short.MaxValue * .24,
+                "User volume must be applied after the peak controller.");
+        }
+    }
+    Console.WriteLine($"PASS {rate} Hz: all profiles loud at full load, bounded peaks and effective volume slider");
     foreach (var profile in EngineProfile.All)
     {
         var idle = new EngineSnapshot(0, 0, profile.IdleRpm, .08, 1, DrivingState.Idle, false);
@@ -185,7 +232,7 @@ foreach (int rate in new[] { 44100, 48000 })
     Console.WriteLine($"PASS {rate} Hz: Plymouth loop seams, bass, throttle and headroom");
 }
 
-if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth"))
+if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth" or "--preview-pedal"))
 {
     var previewProfile = args[0] == "--preview-plymouth"
         ? EngineProfile.All.Single(p => p.Motor == Motor.PlymouthV8) : motor;
@@ -205,8 +252,10 @@ if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth"))
     {
         double t = i / 50d;
         double kmh = t < 3 ? 0 : t < 11 ? (t - 3) / 8 * 25 : t < 14 ? 25 : Math.Max(0, 25 - (t - 14) * 5);
-        if (i % 5 == 0) engine.PushSpeed(kmh / 3.6, 5, t, t);
-        synth.Render(block, engine.Tick(t, previewProfile), previewProfile.Motor, .8);
+        bool pedalDemo = args[0] == "--preview-pedal";
+        if (i % 5 == 0 && !pedalDemo) engine.PushSpeed(kmh / 3.6, 5, t, t);
+        double pedal = pedalDemo ? t is >= 4 and < 6 ? .4 : t is >= 9 and < 12 ? 1 : t is >= 15 and < 17 ? .7 : 0 : 0;
+        synth.Render(block, engine.Tick(t, previewProfile, pedal), previewProfile.Motor, 1);
         foreach (short value in block) writer.Write(value);
     }
     Console.WriteLine($"{previewProfile.Name} preview: {path}");

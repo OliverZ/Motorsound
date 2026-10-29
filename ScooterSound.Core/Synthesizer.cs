@@ -9,6 +9,7 @@ public sealed class Synthesizer
     double smoothRpm = 800, smoothLoad, smoothVolume;
     double startTime = double.PositiveInfinity;
     double plymouthPosition, plymouthExhaust, plymouthTail, plymouthDcInput, plymouthDcOutput;
+    double outputInput, outputDc, outputPeak, outputGain = 1;
     uint random = 0x12345678;
     public bool IsStarting => startTime < 1.65;
 
@@ -20,6 +21,8 @@ public sealed class Synthesizer
         smoothLoad = smoothVolume = 0;
         startTime = 0;
         plymouthPosition = plymouthExhaust = plymouthTail = plymouthDcInput = plymouthDcOutput = 0;
+        outputInput = outputDc = outputPeak = 0;
+        outputGain = 1;
         random = 0x12345678;
     }
 
@@ -29,6 +32,9 @@ public sealed class Synthesizer
         double dt = 1d / sampleRate;
         double smoothing = 1 - Math.Exp(-dt / .045);
         double noiseFilter = 1 - Math.Exp(-Math.Tau * 850 * dt);
+        double dcFilter = Math.Exp(-Math.Tau * 18 * dt);
+        double peakRelease = Math.Exp(-dt / .15);
+        double gainRelease = 1 - Math.Exp(-dt / .12);
         var profile = EngineProfile.All[(int)motor];
         for (int i = 0; i < output.Length; i++)
         {
@@ -80,8 +86,19 @@ public sealed class Synthesizer
                 starter = envelope * (.14 * Math.Sin(whine * Math.Tau) + .20 * filteredNoise) * compression;
                 startTime += dt;
             }
-            double sample = (sound * gain * ignition + starter) * smoothVolume;
-            output[i] = (short)(Math.Clamp(sample, -.95, .95) * short.MaxValue);
+            double raw = sound * gain * ignition + starter;
+            // Use the available PCM range across all profiles. Peak tracking has
+            // instant attack and a smooth release, so transients stay below the
+            // ceiling without flattening the waveform through hard clipping.
+            outputDc = raw - outputInput + dcFilter * outputDc;
+            outputInput = raw;
+            outputPeak = Math.Max(Math.Abs(outputDc), outputPeak * peakRelease);
+            double ceiling = .55 + .40 * Math.Clamp(smoothLoad, 0, 1);
+            double desiredGain = Math.Min(8, ceiling / Math.Max(.04, outputPeak));
+            outputGain = desiredGain < outputGain ? desiredGain
+                : outputGain + gainRelease * (desiredGain - outputGain);
+            double sample = outputDc * outputGain * smoothVolume;
+            output[i] = (short)(Math.Clamp(sample, -.98, .98) * short.MaxValue);
         }
     }
 

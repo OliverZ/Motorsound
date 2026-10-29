@@ -2,7 +2,7 @@ namespace ScooterSound.Core;
 
 // Append profiles to preserve saved motor indices from earlier versions.
 public enum Motor { Scooter, Motorcycle, V8, Turbine, Diesel, PlymouthV8 }
-public enum DrivingState { Idle, Accelerating, Cruising, Decelerating }
+public enum DrivingState { Idle, Accelerating, Cruising, Decelerating, Revving }
 public sealed record EngineProfile(Motor Motor, string Name, string Description, double IdleRpm, double MaxRpm)
 {
     public static IReadOnlyList<EngineProfile> All { get; } = new[]
@@ -49,7 +49,7 @@ public sealed class EngineSimulator
         return true;
     }
 
-    public EngineSnapshot Tick(double now, EngineProfile profile)
+    public EngineSnapshot Tick(double now, EngineProfile profile, double throttle = 0)
     {
         double dt = double.IsNaN(lastTick) ? .02 : Math.Clamp(now - lastTick, 0, .25);
         lastTick = now;
@@ -70,6 +70,7 @@ public sealed class EngineSimulator
         else if (acceleration > .25) state = DrivingState.Accelerating;
         else if (acceleration < -.3) state = DrivingState.Decelerating;
         else if (Math.Abs(acceleration) < .12) state = DrivingState.Cruising;
+        else if (state == DrivingState.Revving) state = DrivingState.Cruising;
         double normalized = Math.Clamp(speed * 3.6 / Math.Max(5, RoadRangeKmh), 0, 1);
         double load = state == DrivingState.Idle ? .08 :
             Math.Clamp(.3 + acceleration * .5 + normalized * .15, .05, 1);
@@ -90,9 +91,18 @@ public sealed class EngineSimulator
                 rev = Math.Clamp(.06 + normalized * gears / gear * (.30 + .16 * load) + .16 * load, 0, 1);
         }
         if (state == DrivingState.Idle) rev = 0;
+        throttle = double.IsFinite(throttle) ? Math.Clamp(throttle, 0, 1) : 0;
+        if (throttle > 0)
+        {
+            // Pedal controls the engine, never the measured GPS speed.
+            rev = Math.Max(rev, throttle);
+            load = Math.Max(load, .08 + .92 * throttle);
+            if (speed < .3) state = DrivingState.Revving;
+        }
         double target = profile.IdleRpm + rev * (profile.MaxRpm - profile.IdleRpm);
-        rpm += (1 - Math.Exp(-dt / (profile.Motor == Motor.Turbine ? 2 : .18))) * (target - rpm);
+        double response = profile.Motor == Motor.Turbine ? 2 : target < rpm ? .55 : .18;
+        rpm += (1 - Math.Exp(-dt / response)) * (target - rpm);
         return new(speed * 3.6, acceleration, rpm, load,
-            profile.Motor is Motor.Scooter or Motor.Turbine ? 0 : gear, state, lost);
+            state == DrivingState.Revving || profile.Motor is Motor.Scooter or Motor.Turbine ? 0 : gear, state, lost);
     }
 }

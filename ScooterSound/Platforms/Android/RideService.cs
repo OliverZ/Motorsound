@@ -78,6 +78,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
                 }
                 else locations.RequestLocationUpdates(LocationManager.GpsProvider, 500, 0, this, locationThread.Looper);
             }
+            RideSession.Throttle = 0;
             RideSession.Running = true;
             RideSession.Status = testMode ? "Testmodus · Geschwindigkeit über den Regler" : "Warte auf GPS …";
             cancellation = new CancellationTokenSource();
@@ -116,6 +117,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
             int bufferBytes = Math.Max(4096, AudioTrack.GetMinBufferSize(rate, ChannelOut.Mono, Encoding.Pcm16bit));
             using var track = new AudioTrack(global::Android.Media.Stream.Music, rate, ChannelOut.Mono, Encoding.Pcm16bit, bufferBytes, AudioTrackMode.Stream);
             if (track.State != AudioTrackState.Initialized) throw new InvalidOperationException("AudioTrack konnte nicht initialisiert werden.");
+            track.SetVolume(1);
             var synth = new Synthesizer();
             synth.Start();
             var buffer = new short[882]; // 20 ms blocks, distinct from the device's output buffer.
@@ -138,11 +140,13 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
                             simulator.PushSpeed(testMetresPerSecond, 0, now, now);
                             lastTest = now;
                         }
-                        snapshot = simulator.Tick(now, profile);
+                        snapshot = simulator.Tick(now, profile, RideSession.Throttle);
                     }
                     if (token.IsCancellationRequested) break;
                     RideSession.Snapshot = snapshot;
-                    if (!testMode) RideSession.Status = snapshot.SignalLost ? "Kein aktuelles GPS · Übergang zum Leerlauf" : "GPS aktiv · Geschwindigkeit geglättet";
+                    if (!testMode) RideSession.Status = snapshot.SignalLost
+                        ? RideSession.Throttle > 0 ? "Kein aktuelles GPS · Gaspedal aktiv" : "Kein aktuelles GPS · Übergang zum Leerlauf"
+                        : "GPS aktiv · Geschwindigkeit geglättet";
                     synth.Render(buffer, snapshot, profile.Motor, RideSession.Volume);
                     int offset = 0;
                     while (offset < buffer.Length && !token.IsCancellationRequested)
@@ -209,6 +213,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
     public override void OnDestroy()
     {
         destroyed = true;
+        RideSession.Throttle = 0;
         cancellation?.Cancel();
         try { locations?.RemoveUpdates(this); }
         catch (Java.Lang.SecurityException) { /* Location permission may have been revoked mid-ride. */ }

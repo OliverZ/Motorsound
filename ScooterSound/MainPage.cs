@@ -15,6 +15,11 @@ public sealed class MainPage : ContentPage
     readonly Switch test = new();
     readonly Picker motors = new() { Title = "Motor wählen", TextColor = Colors.White, TitleColor = Colors.White };
     readonly Slider testSlider = new() { Minimum = 0, Maximum = 35, MinimumTrackColor = Color.FromArgb("#5EE6B0") };
+    readonly Button pedal = new() { Text = "GAS · GEDRÜCKT HALTEN", HeightRequest = 76,
+        CornerRadius = 18, BackgroundColor = Color.FromArgb("#E97035"), TextColor = Colors.White, IsEnabled = false };
+    readonly Slider throttle = new() { Minimum = 0, Maximum = 1, IsEnabled = false,
+        MinimumTrackColor = Color.FromArgb("#E97035") };
+    readonly Label throttleValue = Text("Gaspedal · 0 %", 16, "#E97035");
     readonly IDispatcherTimer timer;
     bool busy;
 
@@ -32,6 +37,15 @@ public sealed class MainPage : ContentPage
         var volume = new Slider { Minimum = 0, Maximum = 1, Value = RideSession.Volume, MinimumTrackColor = Color.FromArgb("#5EE6B0") };
         volume.ValueChanged += (_, e) => RideSession.Volume = e.NewValue;
         volume.DragCompleted += (_, _) => Preferences.Default.Set("volume", RideSession.Volume);
+        var volumeValue = Text($"LAUTSTÄRKE · {RideSession.Volume:P0}", 12, "#B5C3D7");
+        volume.ValueChanged += (_, e) => volumeValue.Text = $"LAUTSTÄRKE · {e.NewValue:P0}";
+        var maximum = new Button { Text = "MAX", BackgroundColor = Color.FromArgb("#192539"), TextColor = Colors.White };
+        maximum.Clicked += (_, _) => { volume.Value = 1; Preferences.Default.Set("volume", 1d); };
+        pedal.Pressed += (_, _) => RideSession.Throttle = 1;
+        pedal.Released += (_, _) => ReleaseThrottle();
+        pedal.Unfocused += (_, _) => ReleaseThrottle();
+        throttle.ValueChanged += (_, e) => RideSession.Throttle = e.NewValue;
+        throttle.DragCompleted += (_, _) => ReleaseThrottle();
         start.Clicked += async (_, _) => await ToggleRide();
         var background = new Button { Text = "GPS bei ausgeschaltetem Display", TextColor = Colors.White,
             BackgroundColor = Color.FromArgb("#192539"), CornerRadius = 12 };
@@ -51,8 +65,10 @@ public sealed class MainPage : ContentPage
                     Content = new VerticalStackLayout { Spacing = 6, Children = { speed, Text("km/h", 16, "#B5C3D7"), rpm, state } }
                 },
                 signal, start,
+                throttleValue, pedal, throttle,
+                Text("Gas dosieren oder Taste halten · Loslassen lässt den Motor abtouren. Im Stand ohne GPS: Testmodus starten.", 12, "#B5C3D7"),
                 background,
-                Text("LAUTSTÄRKE", 12, "#B5C3D7"), volume,
+                new HorizontalStackLayout { Spacing = 16, Children = { volumeValue, maximum } }, volume,
                 new HorizontalStackLayout { Spacing = 16, Children = { Text("Testmodus", 18, "#F4F8FC"), test } },
                 testValue, testSlider,
                 Text("Synthetische Motorprofile · GPS bleibt auf deinem Gerät", 12, "#8293AB")
@@ -67,6 +83,7 @@ public sealed class MainPage : ContentPage
     static Label Text(string text, double size, string color) => new() { Text = text, FontSize = size, TextColor = Color.FromArgb(color) };
     void SelectMotor()
     {
+        ReleaseThrottle();
         if (motors.SelectedIndex < 0) return;
         RideSession.Profile = EngineProfile.All[motors.SelectedIndex];
         description.Text = RideSession.Profile.Description;
@@ -80,6 +97,7 @@ public sealed class MainPage : ContentPage
         start.IsEnabled = false;
         try
         {
+            ReleaseThrottle();
             var context = global::Android.App.Application.Context;
             if (RideSession.Running)
                 context.StopService(new Intent(context, typeof(RideService)));
@@ -156,10 +174,16 @@ public sealed class MainPage : ContentPage
             DrivingState.Accelerating => "Beschleunigen", DrivingState.Decelerating => "Verzögern",
             DrivingState.Cruising => "Gleichmäßige Fahrt", _ => "Leerlauf"
         };
+        if (active && s.State == DrivingState.Revving) state.Text = "Gas geben im Stand";
+        pedal.IsEnabled = throttle.IsEnabled = active;
+        throttleValue.Text = $"Gaspedal · {RideSession.Throttle:P0}";
+        pedal.Text = RideSession.Throttle > 0 ? "GAS AKTIV · LOSLASSEN ZUM ABTOUREN" : "GAS · GEDRÜCKT HALTEN";
+        if (!active || RideSession.Throttle == 0) throttle.Value = 0;
         signal.Text = RideSession.Status;
         start.Text = active ? "Fahrt stoppen" : "Fahrt starten";
         test.IsEnabled = !active;
     }
     protected override void OnAppearing() { base.OnAppearing(); timer.Start(); Refresh(); }
-    protected override void OnDisappearing() { timer.Stop(); base.OnDisappearing(); }
+    void ReleaseThrottle() { RideSession.Throttle = 0; throttle.Value = 0; }
+    protected override void OnDisappearing() { ReleaseThrottle(); timer.Stop(); base.OnDisappearing(); }
 }
