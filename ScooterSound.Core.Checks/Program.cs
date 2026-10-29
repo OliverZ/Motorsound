@@ -55,13 +55,13 @@ Console.WriteLine("PASS braking detection");
 
 static double Rms(IEnumerable<short> samples) => Math.Sqrt(samples.Average(x => (double)x * x));
 
-static short[] RenderSteady(double rpm, double load, int rate = 44100)
+static short[] RenderSteady(double rpm, double load, int rate = 44100, Motor motor = Motor.V8)
 {
     var synth = new Synthesizer();
     var snapshot = new EngineSnapshot(10, 0, rpm, load, 2, DrivingState.Cruising, false);
     var samples = new short[rate];
-    synth.Render(samples, snapshot, Motor.V8, 1, rate); // warm up smoothing/filters
-    synth.Render(samples, snapshot, Motor.V8, 1, rate);
+    synth.Render(samples, snapshot, motor, 1, rate); // warm up smoothing/filters
+    synth.Render(samples, snapshot, motor, 1, rate);
     return samples;
 }
 
@@ -159,8 +159,36 @@ Check(cruise.PushSpeed(4, 5, 50.1, 50.1), "A fresh GPS fix must recover after a 
 Check(!cruise.Tick(50.1, motor).SignalLost, "GPS recovery must resume the engine without a UI tick.");
 Console.WriteLine("PASS low-rev V8 cruise and GPS outage/recovery");
 
-if (args.Length == 2 && args[0] == "--preview")
+// Exercise several actual loop wraps at both native output rates. A discontinuity
+// at the embedded loop seam would otherwise repeat as a click on every ride.
+foreach (int rate in new[] { 44100, 48000 })
 {
+    var plymouth = EngineProfile.All.Single(p => p.Motor == Motor.PlymouthV8);
+    foreach (double rpm in new[] { plymouth.IdleRpm, 1800, plymouth.MaxRpm })
+    {
+        var snapshot = new EngineSnapshot(15, 0, rpm, .8, 2, DrivingState.Cruising, false);
+        var synth = new Synthesizer();
+        var samples = new short[rate * 16];
+        synth.Render(samples, snapshot, Motor.PlymouthV8, 1, rate);
+        Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "Plymouth must not clip at full volume.");
+        int largestStep = samples.Zip(samples.Skip(1), (a, b) => Math.Abs(a - b)).Max();
+        Check(largestStep < 5000, $"Plymouth loop must not click at {rpm} rpm ({largestStep}).");
+        Check(Math.Abs(samples.Average(x => (double)x)) < 200, "Plymouth must not develop a DC offset.");
+        var steady = RenderSteady(rpm, .8, rate, Motor.PlymouthV8);
+        double ratio = BassTrebleRatio(steady, rate);
+        Check(ratio > 4, $"Plymouth must preserve deep exhaust at {rpm} rpm/{rate} Hz (bass/treble {ratio:F1}).");
+    }
+    var quiet = RenderSteady(1600, .08, rate, Motor.PlymouthV8);
+    var throttle = RenderSteady(1600, .85, rate, Motor.PlymouthV8);
+    Check(Rms(throttle) > Rms(quiet) * 1.4, "Plymouth throttle must add body.");
+    Check(!quiet.SequenceEqual(RenderSteady(1600, .08, rate)), "Plymouth must have its own sound.");
+    Console.WriteLine($"PASS {rate} Hz: Plymouth loop seams, bass, throttle and headroom");
+}
+
+if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth"))
+{
+    var previewProfile = args[0] == "--preview-plymouth"
+        ? EngineProfile.All.Single(p => p.Motor == Motor.PlymouthV8) : motor;
     string path = Path.GetFullPath(args[1]);
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     using var writer = new BinaryWriter(File.Create(path));
@@ -178,8 +206,8 @@ if (args.Length == 2 && args[0] == "--preview")
         double t = i / 50d;
         double kmh = t < 3 ? 0 : t < 11 ? (t - 3) / 8 * 25 : t < 14 ? 25 : Math.Max(0, 25 - (t - 14) * 5);
         if (i % 5 == 0) engine.PushSpeed(kmh / 3.6, 5, t, t);
-        synth.Render(block, engine.Tick(t, motor), Motor.V8, .8);
+        synth.Render(block, engine.Tick(t, previewProfile), previewProfile.Motor, .8);
         foreach (short value in block) writer.Write(value);
     }
-    Console.WriteLine($"V8 preview: {path}");
+    Console.WriteLine($"{previewProfile.Name} preview: {path}");
 }

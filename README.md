@@ -2,8 +2,8 @@
 
 Aktuelle Version: **2.0**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
 
-Android-App in .NET MAUI mit fünf synthetischen Motorprofilen: 50-ccm-Roller,
-Motorrad, V8, Flugzeugturbine und Diesel. GPS-Geschwindigkeit steuert virtuelle
+Android-App in .NET MAUI mit sechs Motorprofilen: 50-ccm-Roller,
+Motorrad, V8, Flugzeugturbine, Diesel und Plymouth V8. GPS-Geschwindigkeit steuert virtuelle
 Drehzahl, Last, Schaltverhalten und Klang. Kein Backend, keine Standortübertragung.
 
 ## Starten
@@ -33,10 +33,18 @@ Zylinderbänke, tiefe Kurbelwellenanteile, ein gefilterter Auspuffklang und mehr
 unter Last. Sein Leerlauf liegt bei 620 U/min, die Obergrenze bei 4400 U/min;
 gleichmäßige Fahrt nutzt niedrigere Drehzahlen als Beschleunigen.
 
+Zusätzlich steht **Plymouth V8** zur Auswahl: ein eigener, auf der bereitgestellten
+Aufnahme basierender Auspuffklang, 680 U/min Leerlauf, maximal 4000 U/min und drei
+virtuelle Gänge. Ein 83-KiB-Loop mit weichem Übergang erhält die natürlichen
+Schwankungen der Aufnahme. GPS steuert die Tonhöhe; Last erhöht Lautstärke und
+Sättigung. Die Startsequenz bleibt synthetisch. Quelle und Verarbeitung sind unter
+[Audio/README.md](ScooterSound.Core/Audio/README.md) dokumentiert.
+
 Eine reproduzierbare, 22 Sekunden lange V8-Hörprobe lässt sich ohne Android erzeugen:
 
 ```sh
 dotnet run --project ScooterSound.Core.Checks -- --preview artifacts/v8-start-fahrt.wav
+dotnet run --project ScooterSound.Core.Checks -- --preview-plymouth artifacts/plymouth-v8-start-fahrt.wav
 ```
 
 Die Hörprobe enthält Start/Leerlauf (0–3 s), Beschleunigen (3–11 s), konstante Fahrt
@@ -84,9 +92,9 @@ bestätigt. Ein zusätzlicher Hintergrundstandortzugriff wird dafür nicht angef
 
 ## Umfang und Prüfung
 
-Die Sounds werden mathematisch erzeugt, es sind keine echten Motoraufnahmen enthalten.
-Die fünf Profile unterscheiden sich in Klang, Drehzahlverlauf und Gangsimulation.
-Sample-Layer, Aufnahmen und besondere Schalt-/Abstellgeräusche sind mögliche Erweiterungen.
+Fünf Profile werden mathematisch erzeugt; Plymouth V8 verwendet einen bearbeiteten
+Ausschnitt der Nutzeraufnahme. Die sechs Profile unterscheiden sich in Klang,
+Drehzahlverlauf und Gangsimulation. Besondere Schalt-/Abstellgeräusche sind mögliche Erweiterungen.
 GPS reagiert verzögert; insbesondere bei schlechter Sicht zum Himmel und niedriger Geschwindigkeit
 bleibt die Zustandsschätzung begrenzt. Positionsdifferenzen dienen nur als eingeschränkter Rückfall.
 

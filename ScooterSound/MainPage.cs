@@ -23,7 +23,7 @@ public sealed class MainPage : ContentPage
         Title = "Scooter Sound";
         BackgroundColor = Color.FromArgb("#101827");
         motors.ItemsSource = EngineProfile.All.Select(p => p.Name).ToList();
-        motors.SelectedIndex = Math.Clamp(Preferences.Default.Get("motor", 0), 0, 4);
+        motors.SelectedIndex = Math.Clamp(Preferences.Default.Get("motor", 0), 0, EngineProfile.All.Count - 1);
         SelectMotor();
         motors.SelectedIndexChanged += (_, _) => SelectMotor();
         test.Toggled += (_, e) => { testSlider.IsEnabled = e.Value; testSlider.Value = 0; RideSession.TestSpeed = 0; };

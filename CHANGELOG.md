@@ -1,5 +1,14 @@
 # Änderungen
 
+## Unveröffentlicht
+
+- Zusätzliches Plymouth-V8-Profil auf Basis der bereitgestellten MP3, mit tiefem
+  Auspuff-Loop, lastabhängiger Sättigung, GPS-gesteuerter Tonhöhe und drei Gängen.
+- Sample mit nur 83 KiB statt der vollständigen Aufnahme; Schleifenübergang weich
+  überblendet, Gleichspannungsanteil und Höhen gefiltert.
+- Auswahl und gespeicherte Motorprofile unterstützen jetzt sechs Einträge.
+- Plymouth-Hörprobe sowie Prüfungen auf Schleifenknackser, Bassanteil und Übersteuerung.
+
 ## 2.0
 
 - Tieferer Crossplane-V8 mit unregelmäßigen Zündimpulsen beider Zylinderbänke,

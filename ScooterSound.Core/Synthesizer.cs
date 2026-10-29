@@ -3,9 +3,12 @@ namespace ScooterSound.Core;
 // Continuous, allocation-free PCM synthesis. All phases/filters survive render blocks.
 public sealed class Synthesizer
 {
+    static Synthesizer() { _ = PlymouthSample.Pcm; }
+
     double phase, whine, crank, filteredNoise, exhaust, exhaustBody, exhaustTail, dcInput, dcOutput;
     double smoothRpm = 800, smoothLoad, smoothVolume;
     double startTime = double.PositiveInfinity;
+    double plymouthPosition, plymouthExhaust, plymouthTail, plymouthDcInput, plymouthDcOutput;
     uint random = 0x12345678;
     public bool IsStarting => startTime < 1.65;
 
@@ -16,6 +19,7 @@ public sealed class Synthesizer
         smoothRpm = 180;
         smoothLoad = smoothVolume = 0;
         startTime = 0;
+        plymouthPosition = plymouthExhaust = plymouthTail = plymouthDcInput = plymouthDcOutput = 0;
         random = 0x12345678;
     }
 
@@ -44,7 +48,7 @@ public sealed class Synthesizer
             smoothRpm += smoothing * (targetRpm - smoothRpm);
             smoothLoad += smoothing * ((starting ? .12 : snapshot.Load) - smoothLoad);
             smoothVolume += smoothing * (Math.Clamp(volume, 0, 1) - smoothVolume);
-            double pulses = motor switch { Motor.V8 => 4, Motor.Motorcycle => 2, _ => 1 };
+            double pulses = motor switch { Motor.V8 or Motor.PlymouthV8 => 4, Motor.Motorcycle => 2, _ => 1 };
             phase = (phase + smoothRpm / 60 * pulses * dt) % 1;
             // One complete four-stroke cycle (two crank revolutions), eight V8 firings.
             crank = (crank + smoothRpm / 120 * dt) % 1;
@@ -58,10 +62,16 @@ public sealed class Synthesizer
                 Motor.Scooter => .5 * Math.Sin(p) + .25 * Math.Sin(3 * p) + .12 * Math.Sin(7 * p) + .12 * noise * smoothLoad,
                 Motor.Motorcycle => .55 * Math.Sin(p) + .24 * Math.Sin(2 * p) + .14 * Math.Sin(4 * p) + .08 * filteredNoise,
                 Motor.V8 => V8(dt),
+                Motor.PlymouthV8 => Plymouth(dt),
                 Motor.Turbine => .3 * Math.Sin(whine * Math.Tau) + (.35 + .4 * smoothLoad) * filteredNoise + .08 * Math.Sin(p),
                 _ => .5 * Math.Sin(p) + .22 * Math.Sin(2 * p) + .3 * Math.Pow(Math.Max(0, Math.Sin(p)), 12) + .15 * noise * smoothLoad
             };
-            double gain = motor == Motor.V8 ? .32 + .28 * smoothLoad : .18 + .24 * smoothLoad;
+            double gain = motor switch
+            {
+                Motor.V8 => .32 + .28 * smoothLoad,
+                Motor.PlymouthV8 => .40 + .38 * smoothLoad,
+                _ => .18 + .24 * smoothLoad
+            };
             double starter = 0;
             if (starting)
             {
@@ -73,6 +83,28 @@ public sealed class Synthesizer
             double sample = (sound * gain * ignition + starter) * smoothVolume;
             output[i] = (short)(Math.Clamp(sample, -.95, .95) * short.MaxValue);
         }
+    }
+
+    double Plymouth(double dt)
+    {
+        var pcm = PlymouthSample.Pcm;
+        int index = (int)plymouthPosition;
+        int next = index + 1 == pcm.Length ? 0 : index + 1;
+        double fraction = plymouthPosition - index;
+        double sample = (pcm[index] + (pcm[next] - pcm[index]) * fraction) / short.MaxValue;
+        // GPS changes playback speed continuously. The multi-cycle recording
+        // supplies the irregular burble; throttle adds compression and body.
+        plymouthPosition = (plymouthPosition + PlymouthSample.SampleRate * dt * smoothRpm / PlymouthSample.ReferenceRpm) % pcm.Length;
+        double body = .12 * Math.Sin(crank * Math.Tau * 4) + .08 * Math.Sin(crank * Math.Tau * 6 + .4);
+        double saturated = .85 * Math.Tanh((sample + body) * (1.2 + .7 * smoothLoad));
+        // Pitching up the recording also raises its upper harmonics. Keep the
+        // exhaust dark as revs rise and remove any DC introduced by saturation.
+        double alpha = 1 - Math.Exp(-Math.Tau * (450 + 250 * smoothLoad) * dt);
+        plymouthExhaust += alpha * (saturated - plymouthExhaust);
+        plymouthTail += alpha * (plymouthExhaust - plymouthTail);
+        plymouthDcOutput = plymouthTail - plymouthDcInput + Math.Exp(-Math.Tau * 20 * dt) * plymouthDcOutput;
+        plymouthDcInput = plymouthTail;
+        return plymouthDcOutput;
     }
 
     double V8(double dt)
