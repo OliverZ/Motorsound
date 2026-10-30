@@ -6,6 +6,20 @@ static void Check(bool condition, string message)
     if (!condition) throw new Exception(message);
 }
 
+Check(EngineProfile.DisplayOrder.Select(p => p.Motor).SequenceEqual(new[]
+{
+    Motor.PlymouthV8, Motor.V8, Motor.Diesel, Motor.Motorcycle, Motor.Scooter, Motor.Turbine
+}), "Selection must put V8 profiles first, followed by the smaller piston engines and turbine.");
+foreach (var profile in EngineProfile.All)
+{
+    int restored = EngineProfile.DisplayIndexForMotorId((int)profile.Motor);
+    Check(EngineProfile.DisplayOrder[restored].Motor == profile.Motor,
+        "Existing saved motor IDs must survive the changed display order.");
+}
+Check(EngineProfile.DisplayIndexForMotorId(-1) == 0 && EngineProfile.DisplayIndexForMotorId(999) == 0,
+    "Invalid saved selections must fall back to the first V8.");
+Console.WriteLine("PASS display order and saved motor selection compatibility");
+
 foreach (var profile in EngineProfile.All)
 {
     var engine = new EngineSimulator();
@@ -142,12 +156,11 @@ foreach (int rate in new[] { 44100, 48000 })
 
 // Hann-windowed FFT measures actual audible bass (20–220 Hz) versus
 // upper harmonics above 900 Hz, without leakage from a shallow test filter.
-static double BassTrebleRatio(short[] samples, int rate)
+static Complex[] Spectrum(short[] samples, int n = 32768, int sampleOffset = 0)
 {
-    const int n = 32768;
     var bins = new Complex[n];
     for (int i = 0; i < n; i++)
-        bins[i] = samples[i] * (.5 - .5 * Math.Cos(Math.Tau * i / (n - 1)));
+        bins[i] = samples[sampleOffset + i] * (.5 - .5 * Math.Cos(Math.Tau * i / (n - 1)));
     for (int i = 1, j = 0; i < n; i++)
     {
         int bit = n >> 1;
@@ -169,6 +182,13 @@ static double BassTrebleRatio(short[] samples, int rate)
             }
         }
     }
+    return bins;
+}
+
+static double BassTrebleRatio(short[] samples, int rate)
+{
+    var bins = Spectrum(samples);
+    int n = bins.Length;
     double bass = 0, treble = 0;
     for (int i = 1; i < n / 2; i++)
     {
@@ -180,6 +200,32 @@ static double BassTrebleRatio(short[] samples, int rate)
     return Math.Sqrt(bass / treble);
 }
 
+foreach (int rate in new[] { 44100, 48000 })
+{
+    foreach (Motor type in new[] { Motor.V8, Motor.PlymouthV8, Motor.Diesel })
+    {
+        var profile = EngineProfile.All.Single(p => p.Motor == type);
+        var synth = new Synthesizer();
+        synth.Start();
+        var pcm = new short[rate * 2];
+        synth.Render(pcm, new EngineSnapshot(0, 0, profile.IdleRpm, .08, 1, DrivingState.Idle, true), type, 1, rate);
+        // Analyze cranking before ignition: the old turbine oscillator made
+        // this interval dominated by a narrow tone around 750 Hz.
+        var bins = Spectrum(pcm, 8192, rate / 10);
+        double total = 0, high = 0;
+        for (int i = 1; i < bins.Length / 2; i++)
+        {
+            double hz = (double)i * rate / bins.Length;
+            double power = bins[i].Magnitude * bins[i].Magnitude;
+            if (hz is >= 30 and <= 5000) total += power;
+            if (hz is >= 650 and <= 1300) high += power;
+        }
+        Check(high / total < .08, $"{type}: starter must not produce a high electrical whine ({high / total:P1}).");
+        Check(Rms(pcm.Skip(rate / 10).Take(rate / 4)) > short.MaxValue * .03, "Low starter must remain audible.");
+        Console.WriteLine($"PASS {rate} Hz {type}: starter high-band energy {high / total:P1}");
+    }
+}
+
 foreach (double revs in new[] { 620d, 1600, 2800, 4400 })
 {
     var samples = RenderSteady(revs, .7);
@@ -188,6 +234,25 @@ foreach (double revs in new[] { 620d, 1600, 2800, 4400 })
     Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "V8 must retain headroom at full volume.");
     Check(Math.Abs(samples.Average(x => (double)x)) < 150, "Exhaust must not contain a DC offset.");
     Console.WriteLine($"PASS V8 {revs} rpm: bass/treble RMS {ratio:F1}, peak {samples.Max(x => Math.Abs((int)x)) / (double)short.MaxValue:P0}");
+}
+
+foreach (int rate in new[] { 44100, 48000 })
+{
+    foreach (double rpm in new[] { 650d, 1800, 3200 })
+    {
+        var pcm = RenderSteady(rpm, .8, rate, Motor.Diesel);
+        double ratio = BassTrebleRatio(pcm, rate);
+        Check(ratio > 10, $"Diesel must retain body rather than continuous hiss ({rpm} rpm: {ratio:F1}).");
+        Check(Math.Abs(pcm.Average(x => (double)x)) < 200, "Diesel must not develop a DC offset.");
+        var spectrum = Spectrum(pcm);
+        int peak = Enumerable.Range(1, spectrum.Length / 2 - 1)
+            .Where(i => i * (double)rate / spectrum.Length < 500)
+            .MaxBy(i => spectrum[i].Magnitude);
+        double peakHz = peak * (double)rate / spectrum.Length;
+        Check(Math.Abs(peakHz - rpm / 60 * 3) < rate / (double)spectrum.Length * 2,
+            "Diesel firing frequency must follow a four-stroke six-cylinder engine.");
+        Console.WriteLine($"PASS {rate} Hz Diesel {rpm} rpm: bass/treble {ratio:F1}, firing peak {peakHz:F1} Hz");
+    }
 }
 
 var cruise = new EngineSimulator();
@@ -232,10 +297,14 @@ foreach (int rate in new[] { 44100, 48000 })
     Console.WriteLine($"PASS {rate} Hz: Plymouth loop seams, bass, throttle and headroom");
 }
 
-if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth" or "--preview-pedal"))
+if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth" or "--preview-pedal" or "--preview-diesel"))
 {
-    var previewProfile = args[0] == "--preview-plymouth"
-        ? EngineProfile.All.Single(p => p.Motor == Motor.PlymouthV8) : motor;
+    var previewProfile = args[0] switch
+    {
+        "--preview-plymouth" => EngineProfile.All.Single(p => p.Motor == Motor.PlymouthV8),
+        "--preview-diesel" => EngineProfile.All.Single(p => p.Motor == Motor.Diesel),
+        _ => motor
+    };
     string path = Path.GetFullPath(args[1]);
     Directory.CreateDirectory(Path.GetDirectoryName(path)!);
     using var writer = new BinaryWriter(File.Create(path));
@@ -252,7 +321,7 @@ if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth" or "--pr
     {
         double t = i / 50d;
         double kmh = t < 3 ? 0 : t < 11 ? (t - 3) / 8 * 25 : t < 14 ? 25 : Math.Max(0, 25 - (t - 14) * 5);
-        bool pedalDemo = args[0] == "--preview-pedal";
+        bool pedalDemo = args[0] is "--preview-pedal" or "--preview-diesel";
         if (i % 5 == 0 && !pedalDemo) engine.PushSpeed(kmh / 3.6, 5, t, t);
         double pedal = pedalDemo ? t is >= 4 and < 6 ? .4 : t is >= 9 and < 12 ? 1 : t is >= 15 and < 17 ? .7 : 0 : 0;
         synth.Render(block, engine.Tick(t, previewProfile, pedal), previewProfile.Motor, 1);

@@ -1,10 +1,15 @@
 # Scooter Sound
 
-Aktuelle Version: **3.0**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
+Aktuelle Version: **3.1**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
 
 Android-App in .NET MAUI mit sechs Motorprofilen: 50-ccm-Roller,
 Motorrad, V8, Flugzeugturbine, Diesel und Plymouth V8. GPS-Geschwindigkeit steuert virtuelle
 Drehzahl, Last, Schaltverhalten und Klang. Kein Backend, keine Standortübertragung.
+
+Die Motorauswahl zeigt **Plymouth V8 → V8-Auto → Diesel → Motorrad →
+50-ccm-Roller → Flugzeugturbine**. Die Kolbenmotoren sind nach Größenkategorie
+geordnet; die Turbine steht separat am Ende. Bestehende Motorauswahlen bleiben
+auch nach der Umsortierung erhalten.
 
 ## Starten
 
@@ -51,6 +56,16 @@ dotnet run --project ScooterSound.Core.Checks -- --preview-pedal artifacts/v8-ga
 Diese Hörprobe zeigt Start, Leerlauf und drei Gasstöße bei weiterhin 0 km/h.
 
 ## Klang
+
+Der Diesel verwendet einen tiefen Reihensechser-Klang mit 650 U/min Leerlauf,
+maximal 3200 U/min und fünf virtuellen Gängen. Drei Verbrennungsimpulse je
+Kurbelwellenumdrehung, ein gedämpfter Auspuffklang und kurze mechanische
+Impulsanteile ersetzen die frühere Mischung mit durchgehendem Rauschen.
+Eine Hörprobe mit Start, Leerlauf und Gasstößen im Stand erzeugt:
+
+```sh
+dotnet run --project ScooterSound.Core.Checks -- --preview-diesel artifacts/diesel-ueberarbeitet.wav
+```
 
 Beim Start ertönt für etwa 1,65 Sekunden ein synthetischer Anlasser mit Zündmoment,
 kurzem Hochlaufen und Übergang in den Leerlauf. Bei bereits rollendem Fahrzeug geht
@@ -133,7 +148,7 @@ Eine signierte, eigenständig installierbare Debug-APK lässt sich mit `./build-
 sie landet unter `artifacts/` und richtet sich standardmäßig an ARM64-Geräte.
 Der ARM64-Debug-Build wurde erfolgreich erstellt und die APK-Signatur mit `apksigner`
 geprüft (v2 und v3). Mindestversion Android 8, Zielversion Android 16 / API 36.
-Das GitHub-Release 3.0 enthält eine größenoptimierte ARM64-Release-APK ohne
+Das GitHub-Release 3.1 enthält eine größenoptimierte ARM64-Release-APK ohne
 Debugsymbole und AOT-Vorkompilierung. Die Buildoptionen dafür sind:
 
 ```sh
@@ -141,7 +156,7 @@ dotnet build ScooterSound/ScooterSound.csproj -t:SignAndroidPackage -c Release -
 ```
 
 Für wiederholte Updates denselben Signaturschlüssel verwenden. Die bereitgestellte
-3.0-APK verwendet den Schlüssel aus Release 2.0.
+3.1-APK verwendet denselben Schlüssel wie Release 2.0 und 3.0.
 Ein Laufzeittest auf einem Android-Gerät steht noch aus.
 Vor Verwendung folgende Geräteprüfungen durchführen:
 

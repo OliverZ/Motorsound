@@ -27,8 +27,9 @@ public sealed class MainPage : ContentPage
     {
         Title = "Scooter Sound";
         BackgroundColor = Color.FromArgb("#101827");
-        motors.ItemsSource = EngineProfile.All.Select(p => p.Name).ToList();
-        motors.SelectedIndex = Math.Clamp(Preferences.Default.Get("motor", 0), 0, EngineProfile.All.Count - 1);
+        motors.ItemsSource = EngineProfile.DisplayOrder.Select(p => p.Name).ToList();
+        int savedMotorId = Preferences.Default.Get("motor", (int)EngineProfile.DisplayOrder[0].Motor);
+        motors.SelectedIndex = EngineProfile.DisplayIndexForMotorId(savedMotorId);
         SelectMotor();
         motors.SelectedIndexChanged += (_, _) => SelectMotor();
         test.Toggled += (_, e) => { testSlider.IsEnabled = e.Value; testSlider.Value = 0; RideSession.TestSpeed = 0; };
@@ -85,9 +86,9 @@ public sealed class MainPage : ContentPage
     {
         ReleaseThrottle();
         if (motors.SelectedIndex < 0) return;
-        RideSession.Profile = EngineProfile.All[motors.SelectedIndex];
+        RideSession.Profile = EngineProfile.DisplayOrder[motors.SelectedIndex];
         description.Text = RideSession.Profile.Description;
-        Preferences.Default.Set("motor", motors.SelectedIndex);
+        Preferences.Default.Set("motor", (int)RideSession.Profile.Motor);
     }
 
     async Task ToggleRide()

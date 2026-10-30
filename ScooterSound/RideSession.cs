@@ -6,7 +6,7 @@ namespace ScooterSound;
 public static class RideSession
 {
     static EngineSnapshot snapshot = new(0, 0, 800, 0, 0, DrivingState.Idle, true);
-    static EngineProfile profile = EngineProfile.All[0];
+    static EngineProfile profile = EngineProfile.DisplayOrder[0];
     static double volume = Preferences.Default.Get("volume", 1d);
     static double testSpeed;
     static double throttle;

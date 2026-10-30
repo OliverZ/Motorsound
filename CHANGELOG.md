@@ -1,5 +1,19 @@
 # Änderungen
 
+## 3.1
+
+- Motorauswahl nach Größe gruppiert: Plymouth V8, V8-Auto, Diesel, Motorrad,
+  50-ccm-Roller; die Turbine folgt als Sonderprofil. Gespeicherte Motor-IDs
+  werden unabhängig von der Reihenfolge wiederhergestellt.
+- Diesel als tiefer Reihensechser neu abgestimmt: 650–3200 U/min, drei
+  Zündungen je Kurbelwellenumdrehung, gefilterter Auspuff und kurze mechanische
+  Verbrennungsimpulse mit geringem Rauschanteil.
+- Hohes elektrisches Surren beim Start von V8-Auto, Plymouth V8 und Diesel entfernt:
+  Der Anlasser verwendet keinen reinen 750-Hz-Ton mehr, sondern tief gefiltertes,
+  mit den Kompressionstakten pulsierendes mechanisches Rattern.
+- Zusätzliche Spektralprüfungen für Anlasser und Diesel bei 44,1/48 kHz sowie
+  Prüfungen für die neue Anzeigereihenfolge und bestehende Motorauswahlen.
+
 ## 3.0
 
 - Höherer Ausgangspegel aller sechs Profile durch gemeinsame Pegelanhebung,
