@@ -20,6 +20,14 @@ public sealed class MainPage : ContentPage
     readonly Slider throttle = new() { Minimum = 0, Maximum = 1, IsEnabled = false,
         MinimumTrackColor = Color.FromArgb("#E97035") };
     readonly Label throttleValue = Text("Gaspedal · 0 %", 16, "#E97035");
+    readonly Slider boost = new() { Minimum = 0, Maximum = 18, Value = RideSession.BoostDb,
+        MinimumTrackColor = Color.FromArgb("#5EE6B0") };
+    readonly Slider overdrive = new() { Minimum = 0, Maximum = 1, Value = RideSession.Overdrive,
+        MinimumTrackColor = Color.FromArgb("#E97035") };
+    readonly Label boostValue = Text("", 14, "#5EE6B0");
+    readonly Label overdriveValue = Text("", 14, "#E97035");
+    readonly Label audioHint = Text("", 12, "#B5C3D7");
+    readonly Button resetAudio = new() { Text = "Audio zurücksetzen", BackgroundColor = Color.FromArgb("#192539"), TextColor = Colors.White };
     readonly IDispatcherTimer timer;
     bool busy;
 
@@ -42,6 +50,16 @@ public sealed class MainPage : ContentPage
         volume.ValueChanged += (_, e) => volumeValue.Text = $"LAUTSTÄRKE · {e.NewValue:P0}";
         var maximum = new Button { Text = "MAX", BackgroundColor = Color.FromArgb("#192539"), TextColor = Colors.White };
         maximum.Clicked += (_, _) => { volume.Value = 1; Preferences.Default.Set("volume", 1d); };
+        boost.ValueChanged += (_, e) => { RideSession.BoostDb = e.NewValue; RefreshAudioControls(); };
+        overdrive.ValueChanged += (_, e) => { RideSession.Overdrive = e.NewValue; RefreshAudioControls(); };
+        boost.DragCompleted += (_, _) => RideSession.SaveAudio();
+        overdrive.DragCompleted += (_, _) => RideSession.SaveAudio();
+        resetAudio.Clicked += (_, _) =>
+        {
+            volume.Value = 1; boost.Value = 6; overdrive.Value = 0;
+            RideSession.SaveAudio();
+            RefreshAudioControls();
+        };
         pedal.Pressed += (_, _) => RideSession.Throttle = 1;
         pedal.Released += (_, _) => ReleaseThrottle();
         pedal.Unfocused += (_, _) => ReleaseThrottle();
@@ -70,6 +88,7 @@ public sealed class MainPage : ContentPage
                 Text("Gas dosieren oder Taste halten · Loslassen lässt den Motor abtouren. Im Stand ohne GPS: Testmodus starten.", 12, "#B5C3D7"),
                 background,
                 new HorizontalStackLayout { Spacing = 16, Children = { volumeValue, maximum } }, volume,
+                boostValue, boost, overdriveValue, overdrive, audioHint, resetAudio,
                 new HorizontalStackLayout { Spacing = 16, Children = { Text("Testmodus", 18, "#F4F8FC"), test } },
                 testValue, testSlider,
                 Text("Synthetische Motorprofile · GPS bleibt auf deinem Gerät", 12, "#8293AB")
@@ -89,6 +108,18 @@ public sealed class MainPage : ContentPage
         RideSession.Profile = EngineProfile.DisplayOrder[motors.SelectedIndex];
         description.Text = RideSession.Profile.Description;
         Preferences.Default.Set("motor", (int)RideSession.Profile.Motor);
+        RefreshAudioControls();
+    }
+
+    void RefreshAudioControls()
+    {
+        bool piston = RideSession.Profile.Motor != Motor.Turbine;
+        boost.IsEnabled = overdrive.IsEnabled = resetAudio.IsEnabled = piston;
+        boostValue.Text = $"BOOST · +{RideSession.BoostDb:F1} dB";
+        overdriveValue.Text = $"OVERDRIVE · {RideSession.Overdrive:P0}";
+        audioHint.Text = piston
+            ? "Boost erhöht die Lautheit. Overdrive fügt bewusst Verzerrung hinzu. Spitzen werden begrenzt."
+            : "Nur für Kolbenmotoren · Die Turbine bleibt unverändert.";
     }
 
     async Task ToggleRide()
@@ -186,5 +217,5 @@ public sealed class MainPage : ContentPage
     }
     protected override void OnAppearing() { base.OnAppearing(); timer.Start(); Refresh(); }
     void ReleaseThrottle() { RideSession.Throttle = 0; throttle.Value = 0; }
-    protected override void OnDisappearing() { ReleaseThrottle(); timer.Stop(); base.OnDisappearing(); }
+    protected override void OnDisappearing() { RideSession.SaveAudio(); ReleaseThrottle(); timer.Stop(); base.OnDisappearing(); }
 }

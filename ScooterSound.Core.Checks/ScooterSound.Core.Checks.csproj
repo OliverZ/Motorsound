@@ -6,4 +6,5 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup><ProjectReference Include="../ScooterSound.Core/ScooterSound.Core.csproj" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Fixtures/audio-v3.1.json" LogicalName="AudioBaseline" /></ItemGroup>
 </Project>

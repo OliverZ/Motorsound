@@ -12,6 +12,13 @@ Schleifengrenze. Tiefste Frequenzen und obere Rauschanteile werden gefiltert,
 Pegel und Gleichspannungsanteil normalisiert. Die Aufnahme selbst wird beim
 App-Build nicht benötigt. Das kleine PCM-Sample ist als Assembly-Ressource eingebettet.
 
+Seit Version 3.2 dient dieser unveränderte Loop nur als dezente Leerlauftextur einer
+gleichmäßigen Crossplane-V8-Synthese. Seine Wiedergaberate wird auf 0,85–1,25 begrenzt;
+der Anteil beträgt höchstens 6 % vor dem Profilabgleich und blendet zwischen 700 und
+1600 U/min aus. Die höheren Drehzahlen werden synthetisch erzeugt. Eine zusätzliche
+Sättigung des Samples findet nicht mehr statt; hörbare Verzerrung steuert der separate
+Overdrive-Regler für Kolbenmotoren.
+
 Reproduktion mit NumPy, nach Dekodierung der MP3 in eine 16-Bit-WAV-Datei:
 
 ```sh

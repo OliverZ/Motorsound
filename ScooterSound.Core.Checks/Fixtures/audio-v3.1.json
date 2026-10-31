@@ -1,0 +1,386 @@
+[
+  {
+    "Motor": "Scooter",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "1832CCF9BD5DD1E4EC5FD9BC964A2937FE06198BF74A2A3A410324D8FF04582B",
+    "RmsDb": -10.024942472268064,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "A7A91C181711A6C7DADAB060A1EF6215851A6297813A9D7DFB40C4E54F557ED6",
+    "RmsDb": -8.733418069143374,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "BABF33EF42910CA7CD32EDF0F4B3D823BF03BE7500631CD879F775C0D41545E4",
+    "RmsDb": -4.696820889701085,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "07D77678BCCBF73DD132F3158EFDE7A0AA787D9383462574ED16276B9B87D080",
+    "RmsDb": -6.912661883839986,
+    "Peak": 0.8989226966154973
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "BD76572C43A64A6743E1602F84FDC10B787A943BC779B3B6BE9C5A5C20A8D5A8",
+    "RmsDb": -10.127715636613495,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "75EED844B25BF5CB2EFD4D815B577F9F9B93D7445F55DE343AA6B2F48CAC89CE",
+    "RmsDb": -8.01943623207544,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "EDEE118F00E761DA9FDA123DC1AA5E218D8BBAB1308E8CD449A7C267A53D3235",
+    "RmsDb": -4.252130773162721,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "BA02078FA95582D0A10F89DAFB3656D7A2168FA3E36A20F71B381A580B60743E",
+    "RmsDb": -6.9729368731709425,
+    "Peak": 0.8988921781060213
+  },
+  {
+    "Motor": "V8",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "1F0909BAB132ED0B9F5DA3BB621B2DAE2E07510BE7F630B720D43078DE0EA22B",
+    "RmsDb": -12.496544584559048,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "V8",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "07F31BB3BAFA9F830B299F207F6F4D67077CEB9324712A0032200BC70BC2717E",
+    "RmsDb": -9.995186304229515,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "V8",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "62F0A7A053904D87FA77ECD41ABDFD6EFA792835A85CA035C9952543E45D35EB",
+    "RmsDb": -5.6764309843478555,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "V8",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "8A84D96C00C5860604443B7679410F24922C86250BB13A1D144B0E568CFFA2C7",
+    "RmsDb": -9.26951567430863,
+    "Peak": 0.8988921781060213
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "1A6AAD0B7695D6307F0A72611BAE57284B6DB93202B69528BAFE22F351B11AEC",
+    "RmsDb": -11.437316024772981,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "AE97229A5EA2C6D62721A5CE2A26F9649D3F3A7F854FE31AFE28BE9DB8A74E79",
+    "RmsDb": -10.164748750234626,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "29C2E6FE334DBD8EE16941D4473476B54AA9034B162927D2749AEAC9490CB3B4",
+    "RmsDb": -8.77723932345793,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "C624939B4CB0B191B137BA1570BC29BBC4D6823F3822D1BE1416F445E60ED4AD",
+    "RmsDb": -13.539164983481502,
+    "Peak": 0.6985381633960998
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "D41C77ABDF9D8EC95B4C7C6EAC68F03A2F17012A384EC6F651861BE28B2AD816",
+    "RmsDb": -10.989974603765745,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "CC7FA3CA3204E1D28DED6B99D8BDA82D20163CA00284D0279B616928F14C86D0",
+    "RmsDb": -7.402862710357125,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "386E00348D9B94705CAFF9308111401A35D5EAFFC2DF97106DBA27FA283CE7B9",
+    "RmsDb": -3.960690097392305,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "213231D09758827F8F3483E27DC651AB98DB6F0F82DEC2CB4B53DBC7474E2CAA",
+    "RmsDb": -7.359900913524027,
+    "Peak": 0.8989226966154973
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 44100,
+    "Scenario": "idle",
+    "Sha256": "404D96145EE116A0AC5DDB3F9917127B124467665934FBF4E318B90805513AC7",
+    "RmsDb": -11.043496298972876,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 44100,
+    "Scenario": "cruise",
+    "Sha256": "ACFC9F4C0E144A88BD3533A01EEEC936A97CA3E4A73218C7F67F37F2D6FF6E91",
+    "RmsDb": -9.220393765258036,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 44100,
+    "Scenario": "load",
+    "Sha256": "B229E70E477D024F2346B58830FD7B376D7B570E3286850173A011EB90FAE1AC",
+    "RmsDb": -6.776334621917358,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 44100,
+    "Scenario": "ride",
+    "Sha256": "641302CEBFB48192AD3D29AFE6DEAB2439F7BC2C7B28DF0F4933DF47E363D0F5",
+    "RmsDb": -9.271393985218845,
+    "Peak": 0.8983123264259774
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "BAD817CE4AB5D02D15F0ADE4BC05E44730D9B0009035859AB7E4EB73D5AF1E28",
+    "RmsDb": -10.023942577470951,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "F33E1A313950097CF3A9C569A9C6F68FC656173FC6C3387E7BD900801E475CEF",
+    "RmsDb": -8.731915798641563,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "B2387D39BAEFF2230FA573208E09C45CB86AB1E4D7DF07AD5983CE9A7EE9244E",
+    "RmsDb": -4.711061715094955,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Scooter",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "29AF03FD0C2AE7F886F87CACC38968454E710DFE19BA87EA8ABE8411274B36B2",
+    "RmsDb": -6.913296824802462,
+    "Peak": 0.8988311410870693
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "A112E82CC572D675DD46D40705C535844A48600073FCCA7A1137C3C764E09CE1",
+    "RmsDb": -10.123057757877945,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "92DD6661462CBC9F7A2AD42FE4F7AC7BC875053E10B769FB8D7608047DE90A6E",
+    "RmsDb": -7.998351431431487,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "4697436D11FA861E93C64BF3479F8606F37D819F27457F48387D3CAEF6B3EC45",
+    "RmsDb": -4.229842748637828,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Motorcycle",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "826FFD7818046155BDF221F14F45CE548E5CB4FF9E06A476AB4B167F1E91F402",
+    "RmsDb": -6.970321673548052,
+    "Peak": 0.8988921781060213
+  },
+  {
+    "Motor": "V8",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "D50C8ACA79D1F2E272DB0497EEE997D8933A8C8E772EE973B759ADED1EADBE70",
+    "RmsDb": -12.496648961593937,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "V8",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "B6FE8D9056FBC2228A23C295DF8D2E884651FC3DEA9F765390F982D04FCD19D3",
+    "RmsDb": -9.995556761330121,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "V8",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "1DA105D3864FD2CC3CE38B2E22460D789BF06E62577B6496E7AB4341721373F8",
+    "RmsDb": -5.676047470354055,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "V8",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "20B58A591653A53B1F63DED3114D85166215361510F2E8FC178AAA7FBD00589E",
+    "RmsDb": -9.270089501933255,
+    "Peak": 0.8988921781060213
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "35776EA0A4E97939C26327FBA08B1B1591F6329ABBA267FEA70623BBCB05FB9A",
+    "RmsDb": -11.44081969730253,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "FA54AA5206C7615B8235EB22D387A0A79E8747A3B235715E0722E7C60876299D",
+    "RmsDb": -10.165050044977592,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "2AFA47C5EB1D678EA53BC24592B8C44A55F520EB84556B1AA32143F2DA88AC93",
+    "RmsDb": -8.822478810225567,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Turbine",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "28392C5B116C8E2B75A1D8470F9869D1A4181EC7D3CD62FDC9EB04982E5FDD1A",
+    "RmsDb": -13.469783924715355,
+    "Peak": 0.6987212744529557
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "D789E0C6924BC5CBBB70D1CB3E928573688C9CC2395C8D7EF39513C109ACED3D",
+    "RmsDb": -10.989861813872883,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "190C91A887B0F37D98D6C06C2271E1F093E22E8F40E984CE778A06FC89959196",
+    "RmsDb": -7.402904959308081,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "2E1673E3A6E8CFFCB48B89155B92E7F9DEA2CB8C6A50FF41FA99D5B3D92B8E1E",
+    "RmsDb": -3.9606441556953835,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "Diesel",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "EFE7F7E401877ABF2968172F960574B04A4DA2DE560FCEB1FF2A1F3ADA7AD392",
+    "RmsDb": -7.3605220150508766,
+    "Peak": 0.8989226966154973
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 48000,
+    "Scenario": "idle",
+    "Sha256": "0E500382523BFB59CBC949F49EB99CE1AF21C1F1700B7514BF699D447C08D077",
+    "RmsDb": -11.043507573166497,
+    "Peak": 0.5819879757072665
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 48000,
+    "Scenario": "cruise",
+    "Sha256": "80054792289414E8B40009BD67F385B8A14043FB9D0332BFBDC20B07F6FCCC22",
+    "RmsDb": -9.220561846567678,
+    "Peak": 0.7099826044495987
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 48000,
+    "Scenario": "load",
+    "Sha256": "FF0F8E645D2003869BAB66D10EFE8086198171E2A4E633AEFE985BA6B13C875C",
+    "RmsDb": -6.776446417691453,
+    "Peak": 0.9499801629688406
+  },
+  {
+    "Motor": "PlymouthV8",
+    "Rate": 48000,
+    "Scenario": "ride",
+    "Sha256": "D9D8ED2F3A2CCEFB3F83A2350BEE50F359CFEC64A45CF25F6E796D959550F123",
+    "RmsDb": -9.271414773682103,
+    "Peak": 0.8983123264259774
+  }
+]

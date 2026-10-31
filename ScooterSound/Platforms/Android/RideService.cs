@@ -147,7 +147,7 @@ public sealed class RideService : Service, ILocationListener, AudioManager.IOnAu
                     if (!testMode) RideSession.Status = snapshot.SignalLost
                         ? RideSession.Throttle > 0 ? "Kein aktuelles GPS · Gaspedal aktiv" : "Kein aktuelles GPS · Übergang zum Leerlauf"
                         : "GPS aktiv · Geschwindigkeit geglättet";
-                    synth.Render(buffer, snapshot, profile.Motor, RideSession.Volume);
+                    synth.Render(buffer, snapshot, profile.Motor, RideSession.Audio);
                     int offset = 0;
                     while (offset < buffer.Length && !token.IsCancellationRequested)
                     {

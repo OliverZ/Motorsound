@@ -9,8 +9,8 @@
     <Nullable>enable</Nullable>
     <ApplicationTitle>Scooter Sound</ApplicationTitle>
     <ApplicationId>de.scootersound.app</ApplicationId>
-    <ApplicationDisplayVersion>3.1</ApplicationDisplayVersion>
-    <ApplicationVersion>6</ApplicationVersion>
+    <ApplicationDisplayVersion>3.2</ApplicationDisplayVersion>
+    <ApplicationVersion>7</ApplicationVersion>
     <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>

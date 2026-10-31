@@ -1,6 +1,6 @@
 # Scooter Sound
 
-Aktuelle Version: **3.1**. Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
+Aktuelle Version: **3.2** (Versionscode 7). Änderungen und Installationshinweise: [CHANGELOG.md](CHANGELOG.md).
 
 Android-App in .NET MAUI mit sechs Motorprofilen: 50-ccm-Roller,
 Motorrad, V8, Flugzeugturbine, Diesel und Plymouth V8. GPS-Geschwindigkeit steuert virtuelle
@@ -32,14 +32,31 @@ Motorwechsel und Lautstärke sind während der Fahrt möglich. Motor und Lautst�
 
 ## Lautstärke und Gaspedal
 
-Alle sechs Motorprofile nutzen eine gemeinsame Pegelanhebung mit schneller
-Spitzenbegrenzung und sanfter Freigabe. Bei Vollgas wird der digitale Bereich
-bis etwa 95 % genutzt; Lastunterschiede und die individuelle Klangfarbe bleiben
-erhalten. Der Vergleich bei gleicher Lautstärkereglerstellung ergab je nach
-Profil und Betriebszustand etwa 4,5–15,5 dB mehr RMS-Pegel als zuvor.
-Die neue Voreinstellung ist 100 %. Gespeicherte Werte bleiben erhalten; **MAX**
-setzt den App-Regler auf 100 %. Die Android-Medienlautstärke wird weiterhin über
-die Lautstärketasten des Geräts eingestellt.
+Die fünf Kolbenmotoren erhalten mehr durchschnittlichen Pegel durch Profilabgleich,
+RMS-Kompression und eine eigene Ausgangsstufe. **Die Turbine verwendet unverändert
+die Klangerzeugung und Pegelregelung aus 3.1**, einschließlich Startsequenz und Masterlautstärke.
+
+- **Boost:** 0 bis +18 dB, Voreinstellung +6 dB. Die Anhebung erfolgt nach der Kompression;
+  sie wird nicht durch eine nachfolgende automatische Normalisierung aufgehoben.
+- **Overdrive:** 0–100 %, Voreinstellung 0 %. Optionaler weicher Overdrive mit vierfacher
+  Überabtastung und Anti-Aliasing-Filter; bei 0 % wird der Effekt umgangen.
+- **Audio zurücksetzen:** App-Lautstärke 100 %, Boost +6 dB, Overdrive 0 %.
+- Boost und Overdrive sind bei der Turbine deaktiviert und mit „Nur für Kolbenmotoren“ markiert.
+  Die Einstellungen bleiben für den nächsten Kolbenmotor erhalten.
+
+Neue Einstellungen werden gespeichert und während der Wiedergabe über 50 ms geglättet.
+Gegenüber 3.1 ergeben die identischen Tests bei 100 % App-Lautstärke für den V8
+**+6,54 dB RMS im Leerlauf und +4,98 dB bei 1600 U/min / 40 % Last**. Beim Plymouth
+sind es **+5,47 bzw. +4,38 dB**. Andere Kolbenmotoren gewinnen in diesen Zuständen
+etwa 1,8–3,1 dB; die Turbine bleibt samplegenau gleich. Das sind digitale Messwerte,
+keine Messungen des Schalldrucks am Bluetooth-Lautsprecher.
+
+Die Spitzenbegrenzung der Kolbenmotoren lässt höchstens −0,5 dBFS zu; bei sehr hohem Boost
+begrenzt sie entsprechend stärker. +18 dB Boost bedeutet daher keine garantierte Anhebung
+um 18 dB am Lautsprecher. Die App-Lautstärke wirkt zuletzt und kann auch bei maximalem
+Boost/Overdrive vollständig stummschalten. Bestehende Lautstärkeeinstellungen bleiben erhalten;
+**MAX** setzt den App-Regler auf 100 %. Android-Medienlautstärke und Lautsprecherlautstärke
+werden separat am jeweiligen Gerät eingestellt.
 
 Nach dem Start **GAS · GEDRÜCKT HALTEN** betätigen oder den Gaspedal-Regler
 dosieren. Beim Loslassen geht das Pedal auf null und die Drehzahl fällt weich
@@ -75,11 +92,14 @@ Zylinderbänke, tiefe Kurbelwellenanteile, ein gefilterter Auspuffklang und mehr
 unter Last. Sein Leerlauf liegt bei 620 U/min, die Obergrenze bei 4400 U/min;
 gleichmäßige Fahrt nutzt niedrigere Drehzahlen als Beschleunigen.
 
-Zusätzlich steht **Plymouth V8** zur Auswahl: ein eigener, auf der bereitgestellten
-Aufnahme basierender Auspuffklang, 680 U/min Leerlauf, maximal 4000 U/min und drei
-virtuelle Gänge. Ein 83-KiB-Loop mit weichem Übergang erhält die natürlichen
-Schwankungen der Aufnahme. GPS steuert die Tonhöhe; Last erhöht Lautstärke und
-Sättigung. Die Startsequenz bleibt synthetisch. Quelle und Verarbeitung sind unter
+**Plymouth V8** verwendet jetzt einen gleichmäßig laufenden Crossplane-V8 als Klangbasis:
+680 U/min Leerlauf, maximal 4000 U/min und drei virtuelle Gänge. Der vorhandene
+83-KiB-Loop liefert nur noch dezente Leerlauftextur (maximal 6 % vor dem Profilabgleich),
+mit auf 0,85–1,25 begrenzter Wiedergaberate. Zwischen 700 und 1600 U/min blendet die
+Textur weich aus; höhere Drehzahlen stammen aus der Motorsynthese. Der Loop wird
+nicht länger bis zur Höchstdrehzahl hochgepitcht. Die frühere zusätzliche Plymouth-Sättigung
+entfällt. Beide V8 erhalten hörbarere Auspuff-Obertöne für Bluetooth-Lautsprecher.
+Die Startsequenz bleibt synthetisch. Quelle und Verarbeitung sind unter
 [Audio/README.md](ScooterSound.Core/Audio/README.md) dokumentiert.
 
 Eine reproduzierbare, 22 Sekunden lange V8-Hörprobe lässt sich ohne Android erzeugen:
@@ -134,8 +154,8 @@ bestätigt. Ein zusätzlicher Hintergrundstandortzugriff wird dafür nicht angef
 
 ## Umfang und Prüfung
 
-Fünf Profile werden mathematisch erzeugt; Plymouth V8 verwendet einen bearbeiteten
-Ausschnitt der Nutzeraufnahme. Die sechs Profile unterscheiden sich in Klang,
+Alle Profile verwenden Motorsynthese; Plymouth V8 ergänzt eine dezente Textur aus der
+Nutzeraufnahme. Die sechs Profile unterscheiden sich in Klang,
 Drehzahlverlauf und Gangsimulation. Besondere Schalt-/Abstellgeräusche sind mögliche Erweiterungen.
 GPS reagiert verzögert; insbesondere bei schlechter Sicht zum Himmel und niedriger Geschwindigkeit
 bleibt die Zustandsschätzung begrenzt. Positionsdifferenzen dienen nur als eingeschränkter Rückfall.
@@ -144,20 +164,44 @@ Die Kernprüfungen wurden mit dem lokal eingerichteten .NET-10-SDK erfolgreich a
 Sie prüfen zusätzlich die Startsequenzen aller Profile bei 44,1/48 kHz, blockunabhängige
 PCM-Kontinuität, Stummstellung, V8-Lastdynamik, Bass/Höhen-Verhältnis, Aussteuerungsreserve,
 Gleichspannungsanteil, niedrige Reisedrehzahl sowie GPS-Ausfall und Wiederaufnahme.
-Eine signierte, eigenständig installierbare Debug-APK lässt sich mit `./build-apk.ps1` erzeugen;
-sie landet unter `artifacts/` und richtet sich standardmäßig an ARM64-Geräte.
-Der ARM64-Debug-Build wurde erfolgreich erstellt und die APK-Signatur mit `apksigner`
-geprüft (v2 und v3). Mindestversion Android 8, Zielversion Android 16 / API 36.
-Das GitHub-Release 3.1 enthält eine größenoptimierte ARM64-Release-APK ohne
-Debugsymbole und AOT-Vorkompilierung. Die Buildoptionen dafür sind:
+`./build-apk.ps1` erzeugt eine ARM64-Release-APK ohne Debugsymbole und AOT-Vorkompilierung
+unter `artifacts/ScooterSound-3.2-android-arm64.apk`. `-Configuration Debug` ist optional.
+Mindestversion Android 8, Zielversion Android 16 / API 36. Die Buildoptionen sind:
 
 ```sh
 dotnet build ScooterSound/ScooterSound.csproj -t:SignAndroidPackage -c Release -f net10.0-android -p:RuntimeIdentifier=android-arm64 -p:AndroidPackageFormats=apk -p:EmbedAssembliesIntoApk=true -p:RunAOTCompilation=false -p:DebugSymbols=false -p:DebugType=None
 ```
 
-Für wiederholte Updates denselben Signaturschlüssel verwenden. Die bereitgestellte
-3.1-APK verwendet denselben Schlüssel wie Release 2.0 und 3.0.
-Ein Laufzeittest auf einem Android-Gerät steht noch aus.
+**Signierung:** Der bisherige Schlüssel ist unter `signing/release.keystore` verfügbar
+und durch `.gitignore` ausgeschlossen. Die APK 3.2 wurde damit neu signiert; ihr
+Zertifikats-Fingerprint (SHA-256) stimmt mit dem GitHub-Release 3.1 überein:
+`c18242f05f7fe5a0906a772fd2b169ebb50fe3a45971fc27bcbf10a3a71b5251`.
+Damit ist ein direktes Update über 3.1 ohne Deinstallation möglich. Die Signatur
+wurde mit `apksigner` geprüft (v2/v3). Erneuter Build:
+
+```powershell
+# Passwörter nur in der Umgebung setzen, nicht ins Repository schreiben.
+# ANDROID_SIGNING_STORE_PASSWORD und ANDROID_SIGNING_KEY_PASSWORD müssen gesetzt sein.
+.\build-apk.ps1 -KeyStore '.\signing\release.keystore' -KeyAlias androiddebugkey
+```
+
+Reproduzierbare Audiomessungen und WAV-Hörproben aller Profile:
+
+```powershell
+dotnet run --project tools/AudioAudit -- artifacts/audio-v3.2.json artifacts/after
+```
+
+Die Baseline aus 3.1 liegt unter `ScooterSound.Core.Checks/Fixtures/audio-v3.1.json`.
+Die Regression prüft samplegenaue Turbinen-Hashes für Start/Fahrt und stationäre Zustände
+bei 44,1/48 kHz auch mit maximalen Boost-/Overdrive-Einstellungen. Beide V8 müssen im
+Leerlauf und bei 1600 U/min / 40 % Last mindestens 4 dB mehr RMS-Pegel liefern als 3.1.
+Zusätzlich werden Extremwerte, Regleränderungen, Überabtastung über Blockgrenzen,
+Stummstellung und Motorwechsel geprüft.
+Die Audit-Ausgabe enthält außerdem V8-/Plymouth-Hörproben mit 100 % Overdrive zum
+direkten Vergleich mit dem normalen Klang bei 0 %.
+
+Ein Laufzeittest auf einem Android-Gerät und ein Hörvergleich auf dem Bluetooth-Lautsprecher
+stehen noch aus; digitale Pegelmessungen ersetzen diese Klangabnahme nicht.
 Vor Verwendung folgende Geräteprüfungen durchführen:
 
 - Alle Profile im Testmodus von 0 auf 25 km/h und zurück, Motorwechsel und Stummstellung.

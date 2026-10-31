@@ -1,6 +1,13 @@
 using ScooterSound.Core;
 using System.Numerics;
 
+// Fail cleanly in unattended Windows builds instead of leaving a crash dialog open.
+AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+{
+    Console.Error.WriteLine(e.ExceptionObject);
+    Environment.Exit(1);
+};
+
 static void Check(bool condition, string message)
 {
     if (!condition) throw new Exception(message);
@@ -97,6 +104,15 @@ foreach (var profile in EngineProfile.All)
 
 static double Rms(IEnumerable<short> samples) => Math.Sqrt(samples.Average(x => (double)x * x));
 
+static double CycleMean(short[] samples, double rpm, int rate)
+{
+    // Loud low-frequency waveforms need complete crank cycles; a one-second
+    // fractional cycle can look like DC even for a mathematically pure sine.
+    double period = rate * 120 / rpm;
+    int count = (int)Math.Round(Math.Floor(samples.Length / period) * period);
+    return samples.Take(count).Average(x => (double)x);
+}
+
 static short[] RenderSteady(double rpm, double load, int rate = 44100, Motor motor = Motor.V8)
 {
     var synth = new Synthesizer();
@@ -142,7 +158,7 @@ foreach (int rate in new[] { 44100, 48000 })
         Check(!whole.IsStarting && !blocks.IsStarting, "Starter must finish and hand over to idle.");
         Check(Rms(continuous.Skip(rate / 10).Take(rate / 4)) > 80, "Cranking must be audible before ignition.");
         Check(Rms(continuous.Skip(rate * 2)) > 300, "Ignition must settle into audible idle.");
-        Check(continuous.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "Startup must retain headroom.");
+        Check(continuous.Max(x => Math.Abs((int)x)) < short.MaxValue * .951, "Startup must retain limiter headroom.");
         int largestStep = continuous.Zip(continuous.Skip(1), (a, b) => Math.Abs(a - b)).Max();
         Check(largestStep < 12000, "Startup must not click at ignition or idle handover.");
         whole.Render(continuous, idle, profile.Motor, 0, rate);
@@ -150,7 +166,8 @@ foreach (int rate in new[] { 44100, 48000 })
     }
     var quiet = RenderSteady(1600, .08, rate);
     var throttle = RenderSteady(1600, .85, rate);
-    Check(Rms(throttle) > Rms(quiet) * 1.4, "Throttle must add body at the same RPM.");
+    Check(Rms(throttle) >= Rms(quiet) * .98 && BassTrebleRatio(throttle, rate) < BassTrebleRatio(quiet, rate),
+        "Throttle must open the exhaust without losing sustained loudness at the same RPM.");
     Console.WriteLine($"PASS {rate} Hz: all motor starts, PCM block continuity, mute and V8 throttle dynamics");
 }
 
@@ -230,9 +247,10 @@ foreach (double revs in new[] { 620d, 1600, 2800, 4400 })
 {
     var samples = RenderSteady(revs, .7);
     double ratio = BassTrebleRatio(samples, 44100);
-    Check(ratio > 4, $"V8 must stay bass-dominant, including at high RPM ({revs}: {ratio:F1}).");
-    Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "V8 must retain headroom at full volume.");
-    Check(Math.Abs(samples.Average(x => (double)x)) < 150, "Exhaust must not contain a DC offset.");
+    Check(ratio > 1, $"V8 must retain bass while allowing audible exhaust harmonics ({revs}: {ratio:F1}).");
+    Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .945, "V8 must retain limiter headroom at full volume.");
+    double mean = CycleMean(samples, revs, 44100);
+    Check(Math.Abs(mean) < 150, $"Exhaust must not contain a DC offset ({revs} rpm: {mean:F1}).");
     Console.WriteLine($"PASS V8 {revs} rpm: bass/treble RMS {ratio:F1}, peak {samples.Max(x => Math.Abs((int)x)) / (double)short.MaxValue:P0}");
 }
 
@@ -282,20 +300,23 @@ foreach (int rate in new[] { 44100, 48000 })
         var synth = new Synthesizer();
         var samples = new short[rate * 16];
         synth.Render(samples, snapshot, Motor.PlymouthV8, 1, rate);
-        Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .9, "Plymouth must not clip at full volume.");
+        Check(samples.Max(x => Math.Abs((int)x)) < short.MaxValue * .945, "Plymouth must not clip at full volume.");
         int largestStep = samples.Zip(samples.Skip(1), (a, b) => Math.Abs(a - b)).Max();
         Check(largestStep < 5000, $"Plymouth loop must not click at {rpm} rpm ({largestStep}).");
         Check(Math.Abs(samples.Average(x => (double)x)) < 200, "Plymouth must not develop a DC offset.");
         var steady = RenderSteady(rpm, .8, rate, Motor.PlymouthV8);
         double ratio = BassTrebleRatio(steady, rate);
-        Check(ratio > 4, $"Plymouth must preserve deep exhaust at {rpm} rpm/{rate} Hz (bass/treble {ratio:F1}).");
+        Check(ratio > 1, $"Plymouth must preserve exhaust body and audible harmonics at {rpm} rpm/{rate} Hz (bass/treble {ratio:F1}).");
     }
     var quiet = RenderSteady(1600, .08, rate, Motor.PlymouthV8);
     var throttle = RenderSteady(1600, .85, rate, Motor.PlymouthV8);
-    Check(Rms(throttle) > Rms(quiet) * 1.4, "Plymouth throttle must add body.");
+    Check(Rms(throttle) >= Rms(quiet) * .98 && BassTrebleRatio(throttle, rate) < BassTrebleRatio(quiet, rate),
+        "Plymouth throttle must open the exhaust without losing loudness.");
     Check(!quiet.SequenceEqual(RenderSteady(1600, .08, rate)), "Plymouth must have its own sound.");
     Console.WriteLine($"PASS {rate} Hz: Plymouth loop seams, bass, throttle and headroom");
 }
+
+AudioRegression.Run();
 
 if (args.Length == 2 && (args[0] is "--preview" or "--preview-plymouth" or "--preview-pedal" or "--preview-diesel"))
 {

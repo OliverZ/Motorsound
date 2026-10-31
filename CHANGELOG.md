@@ -1,5 +1,28 @@
 # Änderungen
 
+## 3.2
+
+- Lautere Kolbenmotoren mit Profilabgleich, RMS-Kompression, Boost und Spitzenbegrenzung
+  bei −0,5 dBFS. Masterlautstärke bleibt nach der Verarbeitung wirksam.
+- Separate, gespeicherte Regler für Boost (0 bis +18 dB, Standard +6 dB) und Overdrive
+  (0–100 %, Standard 0 %). Overdrive mit vierfacher Überabtastung; Regler werden geglättet.
+- Turbine verwendet vollständig den bisherigen Verarbeitungspfad aus 3.1. Neue Regler
+  sind für dieses Profil deaktiviert. Golden-Hashes sichern die samplegenaue Ausgabe ab.
+- Beide V8 erhalten mehr hörbare Auspuff-Obertöne. Plymouth nutzt eine gleichmäßige
+  Crossplane-Synthese; der Aufnahme-Loop bleibt dezente Leerlauftextur mit begrenzter
+  Wiedergaberate und Ausblendung bis 1600 U/min. Keine zusätzliche Plymouth-Sättigung.
+- Reproduzierbare Vorher-/Nachher-Messungen, Turbinen-Referenzen und Tests bei 44,1/48 kHz.
+- Versionscode 7. ARM64-Release-Build; Buildskript unterstützt einen expliziten Keystore
+  und Passwörter aus Umgebungsvariablen.
+
+Die APK 3.2 wurde mit dem inzwischen kopierten Originalschlüssel aus
+`signing/release.keystore` neu signiert. Der Zertifikats-Fingerprint stimmt mit
+Release 3.1 überein; direkte Updates sind ohne Deinstallation möglich.
+Das Buildskript entfernt vor dem Signieren ausschließlich die erzeugten signierten
+APKs des aktuellen Buildordners, damit ein Schlüsselwechsel nicht durch den
+inkrementellen Android-Build übergangen wird. Bluetooth-Hörvergleich und Bedienung
+auf einem echten Android-Gerät sind weiterhin manuell zu prüfen.
+
 ## 3.1
 
 - Motorauswahl nach Größe gruppiert: Plymouth V8, V8-Auto, Diesel, Motorrad,
